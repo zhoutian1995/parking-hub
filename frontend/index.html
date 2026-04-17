@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="antialiased">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>ParkingHub · 江南之星车位枢纽</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🅿️</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { fontFamily: { sans: ['"Noto Sans SC"', 'PingFang SC', 'system-ui', 'sans-serif'] } } }
+    };
+  </script>
+  <style>
+    body { background: #FDFDFB; }
+    .no-scroll::-webkit-scrollbar { display: none; }
+    .fade-in { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .spot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 6px; }
+    .spot-cell {
+      aspect-ratio: 1; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.2s; position: relative;
+    }
+    .spot-cell.idle { background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; }
+    .spot-cell.available { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+    .spot-cell.occupied { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .spot-cell:hover { transform: scale(1.08); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; justify-content: center; z-index: 100; }
+    .modal-sheet { background: #FDFDFB; border-radius: 20px 20px 0 0; width: 100%; max-width: 480px; padding: 24px; max-height: 80vh; overflow-y: auto; animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col no-scroll">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-50 bg-[#FDFDFB]/80 backdrop-blur-xl border-b border-neutral-200/60">
+    <div class="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+      <div class="font-semibold tracking-tighter text-base flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-neutral-900 flex items-center justify-center">
+          <span class="text-white text-xs">🅿️</span>
+        </div>
+        ParkingHub
+      </div>
+      <div id="header-right">
+        <button onclick="handleLogin()" class="text-sm font-medium text-neutral-500 hover:text-neutral-900 transition-colors">
+          登录
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="max-w-lg mx-auto w-full px-4 py-6 flex-grow">
+
+    <!-- Stats -->
+    <div id="stats-bar" class="grid grid-cols-3 gap-3 mb-6">
+      <div class="bg-white rounded-2xl border border-neutral-200/50 p-4 text-center">
+        <div class="text-2xl font-bold text-emerald-600" id="stat-available">-</div>
+        <div class="text-xs text-neutral-400 mt-1">可借用</div>
+      </div>
+      <div class="bg-white rounded-2xl border border-neutral-200/50 p-4 text-center">
+        <div class="text-2xl font-bold text-neutral-800" id="stat-occupied">-</div>
+        <div class="text-xs text-neutral-400 mt-1">使用中</div>
+      </div>
+      <div class="bg-white rounded-2xl border border-neutral-200/50 p-4 text-center">
+        <div class="text-2xl font-bold text-neutral-400" id="stat-total">-</div>
+        <div class="text-xs text-neutral-400 mt-1">总车位</div>
+      </div>
+    </div>
+
+    <!-- Zone Tabs -->
+    <div class="flex gap-2 mb-4 overflow-x-auto no-scroll">
+      <button class="zone-tab active px-4 py-2 rounded-xl text-sm font-medium bg-neutral-900 text-white" data-zone="all" onclick="switchZone('all')">全部</button>
+      <button class="zone-tab px-4 py-2 rounded-xl text-sm font-medium bg-neutral-100 text-neutral-500" data-zone="E" onclick="switchZone('E')">E 区 · 370</button>
+      <button class="zone-tab px-4 py-2 rounded-xl text-sm font-medium bg-neutral-100 text-neutral-500" data-zone="F" onclick="switchZone('F')">F 区 · 118</button>
+      <button class="zone-tab px-4 py-2 rounded-xl text-sm font-medium bg-neutral-100 text-neutral-500" data-zone="G" onclick="switchZone('G')">G 区 · 295</button>
+    </div>
+
+    <!-- Legend -->
+    <div class="flex items-center gap-4 mb-4 text-xs text-neutral-400">
+      <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-neutral-100 border border-neutral-200"></span> 未认领</div>
+      <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-50 border border-emerald-200"></span> 可借用</div>
+      <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-red-50 border border-red-200"></span> 使用中</div>
+    </div>
+
+    <!-- Spots Grid -->
+    <div id="spots-container" class="bg-white rounded-2xl border border-neutral-200/50 p-4 min-h-[200px]">
+      <div class="text-center text-neutral-400 text-sm py-8">加载中...</div>
+    </div>
+
+    <!-- My Section (visible when logged in) -->
+    <div id="my-section" class="hidden mt-6 space-y-4">
+      <!-- Share My Spot -->
+      <div class="bg-white rounded-2xl border border-neutral-200/50 p-5">
+        <h3 class="text-sm font-semibold text-neutral-900 mb-3">共享我的车位</h3>
+        <div class="flex gap-2">
+          <input id="share-code" class="flex-1 px-3 py-2 rounded-xl border border-neutral-200 text-sm outline-none focus:border-neutral-400" placeholder="车位编号 如 E-001">
+          <button onclick="shareSpot()" class="px-4 py-2 rounded-xl bg-neutral-900 text-white text-sm font-medium hover:bg-neutral-800 transition-colors">发布</button>
+        </div>
+      </div>
+
+      <!-- My Borrows -->
+      <div class="bg-white rounded-2xl border border-neutral-200/50 p-5">
+        <h3 class="text-sm font-semibold text-neutral-900 mb-3">我的借用</h3>
+        <div id="my-borrows" class="text-sm text-neutral-400">暂无记录</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Spot Detail Modal -->
+  <div id="modal-spot" class="modal-overlay hidden" onclick="if(event.target===this)closeModal()">
+    <div class="modal-sheet">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold" id="modal-title">车位</h2>
+        <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center">
+          <iconify-icon icon="solar:close-circle-linear" class="text-neutral-500"></iconify-icon>
+        </button>
+      </div>
+      <div id="modal-body"></div>
+      <div id="modal-actions" class="mt-4 space-y-2"></div>
+    </div>
+  </div>
+
+  <!-- Verify Modal -->
+  <div id="modal-verify" class="modal-overlay hidden" onclick="if(event.target===this)closeModal()">
+    <div class="modal-sheet">
+      <h2 class="text-lg font-bold mb-2">邻居认证</h2>
+      <p class="text-sm text-neutral-500 mb-4">为了保证小区私域环境，请上传一张能证明您是本小区业主或租户的凭证。</p>
+      <p class="text-xs text-neutral-400 mb-4">支持：房产证 / 车位租赁合同 / 物业缴费凭证 / 车位购买合同</p>
+      <div class="mb-4">
+        <input type="file" id="verify-file" accept="image/*" capture="environment" class="w-full text-sm">
+      </div>
+      <p class="text-xs text-neutral-400 mb-4">🔒 您的证件照仅在验证瞬间使用，验证完后系统将物理销毁，不留底稿。</p>
+      <button onclick="submitVerify()" class="w-full py-3 rounded-xl bg-neutral-900 text-white text-sm font-semibold">提交认证</button>
+      <button onclick="closeModal()" class="w-full py-3 rounded-xl bg-neutral-100 text-neutral-600 text-sm font-medium mt-2">取消</button>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
