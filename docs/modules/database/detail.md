@@ -12,7 +12,7 @@
 | avatar | TEXT | 否 | '' | 头像 URL |
 | building | TEXT | 否 | '' | 楼栋（如"20幢"） |
 | unit | TEXT | 否 | '' | 单元（如"2单元"） |
-| preferred_zone | TEXT | 否 | '' | 常用停车区域（如"B1-A"） |
+| preferred_zone | TEXT | 否 | '' | 常用停车区域（如"G"） |
 | credit | INTEGER | 否 | 100 | 信用分 |
 | is_admin | INTEGER | 否 | 0 | 是否管理员（0/1） |
 | verified | INTEGER | 否 | 0 | 是否已认证（0/1） |
@@ -58,7 +58,7 @@
 | 字段 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | id | INTEGER | 自增 | - | 主键 |
-| code | TEXT | 是 | - | 区域代码（UNIQUE，如"B1-A"） |
+| code | TEXT | 是 | - | 区域代码（UNIQUE，如"A"） |
 | label | TEXT | 是 | - | 显示名（如"地下一层A区"） |
 | floor | INTEGER | 是 | - | 楼层（1 或 2） |
 | sort_order | INTEGER | 否 | 0 | 排序 |
@@ -77,13 +77,13 @@
 ### zones 表初始数据
 ```sql
 INSERT INTO zones (code, label, floor, sort_order) VALUES
-  ('B1-A', '地下一层A区', 1, 1),
-  ('B1-B', '地下一层B区', 1, 2),
-  ('B1-C', '地下一层C区', 1, 3),
-  ('B1-D', '地下一层D区', 1, 4),
-  ('B1-E', '地下一层E区', 1, 5),
-  ('B1-F', '地下一层F区', 1, 6),
-  ('B2-G', '地下二层G区', 2, 7);
+  ('A', '地下一层A区', 1, 1),
+  ('B', '地下一层B区', 1, 2),
+  ('C', '地下一层C区', 1, 3),
+  ('D', '地下一层D区', 1, 4),
+  ('E', '地下一层E区', 1, 5),
+  ('F', '地下一层F区', 1, 6),
+  ('G', '地下二层G区', 2, 7);
 ```
 
 ### spots 表初始数据

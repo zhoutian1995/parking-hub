@@ -11,7 +11,7 @@
 | avatar | TEXT | - | 头像 URL |
 | building | TEXT | ✅ | 楼栋（如"20幢"） |
 | unit | TEXT | ✅ | 单元（如"2单元"，单单元楼可为空） |
-| preferred_zone | TEXT | ✅ | 常用停车区域（如"B2-A"） |
+| preferred_zone | TEXT | ✅ | 常用停车区域（如"G"） |
 | credit | INTEGER | 默认100 | 信用分 |
 | is_admin | INTEGER | 默认0 | 是否管理员 |
 | created_at | TEXT | 自动 | 注册时间 |
@@ -47,38 +47,37 @@ CREATE TABLE buildings (
 
 ## 停车区域列表
 
-```
-┌─────────┬──────────────────────┐
-│ 区域代码  │ 说明                  │
-├─────────┼──────────────────────┤
-│ B1-A    │ 地下一层 A 区          │
-│ B1-B    │ 地下一层 B 区          │
-│ B1-C    │ 地下一层 C 区          │
-│ B2-A    │ 地下二层 A 区          │
-│ B2-B    │ 地下二层 B 区          │
-│ B2-C    │ 地下二层 C 区          │
-└─────────┴──────────────────────┘
-```
+| 区域 | 楼层 | 编号范围 | 数量 | 说明 |
+|------|------|----------|------|------|
+| A | B1 | A001~A378 | 378 | 地下一层 A 区 |
+| B | B1 | B001~B416 | 416 | 地下一层 B 区 |
+| C | B1 | C001~C475 | 475 | 地下一层 C 区 |
+| D | B1 | D001~D283 | 283 | 地下一层 D 区 |
+| E | B1 | E001~E355 | 355 | 地下一层 E 区 |
+| F | B1 | F001~F118 | 118 | 地下一层 F 区 |
+| G | B2 | G001~G300 | 300 | 地下二层 G 区 |
 
 **数据库表结构：**
 
 ```sql
 CREATE TABLE zones (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  code TEXT UNIQUE NOT NULL,    -- "B1-A"
+  code TEXT UNIQUE NOT NULL,    -- "A"
   label TEXT NOT NULL,          -- "地下一层A区"
   floor INTEGER NOT NULL,       -- 1 或 2
   sort_order INTEGER DEFAULT 0
 );
 ```
 
+> 注：`preferred_zone` 字段（users 表）对应用户选择的"常用停车区域"，值为区域代码如 "A"、"G"。
+
 ## 车位表（改造）
 
 ```sql
 CREATE TABLE spots (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  zone TEXT NOT NULL,              -- "B2-A"
-  spot_code TEXT UNIQUE NOT NULL,  -- "E-005"
+  zone TEXT NOT NULL,              -- "B1" 或 "B2"
+  spot_code TEXT UNIQUE NOT NULL,  -- "A001"
   owner_id INTEGER,
   status TEXT DEFAULT 'idle',      -- idle / available / occupied
   price_hour REAL DEFAULT 4.0,
