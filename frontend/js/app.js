@@ -2,7 +2,6 @@
 const API = '/api';
 let token = localStorage.getItem('ph_token');
 let currentUser = null;
-let zoneStats = {}; // { E: {total, available, occupied}, F: {...}, G: {...} }
 let currentSpots = [];
 
 // ========== 初始化 ==========
@@ -16,9 +15,9 @@ async function init() {
   }
   if (token) {
     await loadUser();
+  } else {
+    showView('home');
   }
-  await loadZoneStats();
-  renderZoneCards();
 }
 
 // ========== 用户 ==========
@@ -27,15 +26,33 @@ async function loadUser() {
     const res = await api('GET', '/me');
     currentUser = res;
     renderHeader();
+    // 首次登录（没填楼栋）→ 显示完善信息页
+    if (!currentUser.building) {
+      await loadProfile();
+      showView('profile');
+      return;
+    }
+    showView('home');
     document.getElementById('my-section').classList.remove('hidden');
     loadMySpots();
     loadMyBorrows();
+    loadNearbySpots();
   } catch {
     token = null;
     localStorage.removeItem('ph_token');
     currentUser = null;
     renderHeader();
+    showView('home');
   }
+}
+
+function showView(name) {
+  ['home', 'zone', 'profile'].forEach(v => {
+    const el = document.getElementById('view-' + v);
+    if (el) el.classList.add('hidden');
+  });
+  const target = document.getElementById('view-' + name);
+  if (target) target.classList.remove('hidden');
 }
 
 function renderHeader() {
@@ -76,81 +93,6 @@ async function handleLogin() {
   }
 }
 
-// ========== 区域统计 ==========
-async function loadZoneStats() {
-  try {
-    const res = await api('GET', '/spots/stats');
-    // res 格式: { E: {total, available, occupied}, F: {...}, G: {...}, all: {total, available, occupied} }
-    zoneStats = res;
-    document.getElementById('stat-available').textContent = res.all?.available || 0;
-    document.getElementById('stat-occupied').textContent = res.all?.occupied || 0;
-    document.getElementById('stat-total').textContent = res.all?.total || 0;
-  } catch {
-    document.getElementById('stat-available').textContent = '-';
-    document.getElementById('stat-occupied').textContent = '-';
-    document.getElementById('stat-total').textContent = '-';
-  }
-}
-
-function renderZoneCards() {
-  const container = document.getElementById('zone-cards');
-  const zones = ['E', 'F', 'G'];
-  const zoneNames = { E: 'E 区', F: 'F 区', G: 'G 区' };
-  const zoneColors = { E: 'emerald', F: 'blue', F: 'blue', G: 'amber' };
-
-  container.innerHTML = zones.map(z => {
-    const s = zoneStats[z] || { total: 0, available: 0, occupied: 0 };
-    const idle = s.total - s.available - s.occupied;
-    return `
-      <div class="zone-card bg-white rounded-2xl border border-neutral-200/50 p-5 cursor-pointer" onclick="enterZone('${z}')">
-        <div class="flex items-center justify-between">
-          <div>
-            <h3 class="text-base font-semibold text-neutral-900">${zoneNames[z]}</h3>
-            <div class="flex items-center gap-4 mt-2">
-              <span class="text-xs text-neutral-400">共 <span class="font-semibold text-neutral-700">${s.total}</span> 个</span>
-              <span class="text-xs text-emerald-600">${s.available} 可借用</span>
-              <span class="text-xs text-red-500">${s.occupied} 使用中</span>
-            </div>
-          </div>
-          <iconify-icon icon="solar:alt-arrow-right-linear" class="text-neutral-300 text-xl"></iconify-icon>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// ========== 进入区域 ==========
-async function enterZone(zone) {
-  document.getElementById('view-home').classList.add('hidden');
-  document.getElementById('view-zone').classList.remove('hidden');
-  document.getElementById('zone-title').textContent = zone + ' 区';
-  await loadSpots(zone);
-}
-
-function goHome() {
-  document.getElementById('view-home').classList.remove('hidden');
-  document.getElementById('view-zone').classList.add('hidden');
-  loadZoneStats(); // 刷新统计
-}
-
-async function loadSpots(zone) {
-  currentSpots = await api('GET', `/spots?zone=${zone}`);
-  renderSpots();
-}
-
-function renderSpots() {
-  const container = document.getElementById('spots-container');
-  if (!currentSpots.length) {
-    container.innerHTML = '<div class="text-center text-neutral-400 text-sm py-8">暂无车位数据</div>';
-    return;
-  }
-  container.innerHTML = `<div class="spot-grid">${currentSpots.map(s => `
-    <div class="spot-cell ${s.status}" onclick="showSpotDetail(${s.id})" title="${s.spot_code}">
-      ${s.spot_code.split('-')[1]}
-    </div>
-  `).join('')}</div>`;
-}
-
 // ========== 搜索 ==========
 function handleSearch(query) {
   const container = document.getElementById('search-results');
@@ -166,7 +108,7 @@ function handleSearch(query) {
       return;
     }
     container.innerHTML = results.map(s => `
-      <div class="flex items-center justify-between p-3 border-b border-neutral-100 last:border-0 cursor-pointer hover:bg-neutral-50" onclick="showSpotFromSearch(${s.id}, '${s.zone}')">
+      <div class="flex items-center justify-between p-3 border-b border-neutral-100 last:border-0 cursor-pointer hover:bg-neutral-50" onclick="showSpotFromSearch(${s.id})">
         <div>
           <span class="text-sm font-medium">${s.spot_code}</span>
           <span class="text-xs ml-2 ${s.status === 'available' ? 'text-emerald-600' : s.status === 'occupied' ? 'text-red-500' : 'text-neutral-400'}">${statusText(s.status)}</span>
@@ -178,12 +120,17 @@ function handleSearch(query) {
   });
 }
 
-async function showSpotFromSearch(id, zone) {
+async function showSpotFromSearch(id) {
   document.getElementById('search-input').value = '';
   document.getElementById('search-results').classList.add('hidden');
-  // 加载该区域的车位数据然后显示详情
-  currentSpots = await api('GET', `/spots?zone=${zone}`);
-  showSpotDetail(id);
+  // 通过 API 获取车位详情
+  try {
+    const spot = await api('GET', `/spots/${id}`);
+    currentSpots = [spot];
+    showSpotDetail(id);
+  } catch (e) {
+    alert('获取车位详情失败');
+  }
 }
 
 // ========== 车位详情 ==========
@@ -237,8 +184,7 @@ async function borrowSpot(id) {
     await api('POST', '/borrows', { spot_id: id, plate });
     closeModal();
     alert('申请成功！等待车位主人确认');
-    const spot = currentSpots.find(s => s.id === id);
-    if (spot) loadSpots(spot.zone);
+    loadNearbySpots();
   } catch (e) {
     alert(e.message);
   }
@@ -278,13 +224,13 @@ async function loadMySpots() {
 async function shareSpot(id) {
   await api('POST', `/spots/${id}/share`);
   loadMySpots();
-  loadZoneStats();
+  loadNearbySpots();
 }
 
 async function unshareSpot(id) {
   await api('POST', `/spots/${id}/unshare`);
   loadMySpots();
-  loadZoneStats();
+  loadNearbySpots();
 }
 
 function showVerifyModal() {
@@ -361,6 +307,95 @@ async function api(method, path, body) {
     throw new Error(err.error);
   }
   return res.json();
+}
+
+// ========== 完善信息页 ==========
+let allBuildings = [];
+let allZones = [];
+let selectedZone = '';
+
+async function loadProfile() {
+  // 预填昵称
+  if (currentUser?.nickname) {
+    document.getElementById('profile-nickname').value = currentUser.nickname;
+  }
+  // 加载楼栋
+  allBuildings = await api('GET', '/buildings');
+  const sel = document.getElementById('profile-building');
+  sel.innerHTML = '<option value="">选择楼栋</option>' +
+    allBuildings.map(b => `<option value="${b.name}">${b.name}</option>`).join('');
+  sel.onchange = () => loadUnits(sel.value);
+  // 加载区域
+  allZones = await api('GET', '/zones');
+  const zoneContainer = document.getElementById('profile-zones');
+  zoneContainer.innerHTML = allZones.map(z => `
+    <button onclick="selectZone('${z.code}', this)"
+      class="zone-btn py-2 rounded-xl border border-neutral-200 text-sm font-medium hover:border-neutral-400 transition-colors"
+      data-code="${z.code}">
+      ${z.code}
+    </button>
+  `).join('');
+}
+
+function loadUnits(buildingName) {
+  const sel = document.getElementById('profile-unit');
+  const building = allBuildings.find(b => b.name === buildingName);
+  if (!building) {
+    sel.innerHTML = '<option value="">先选择楼栋</option>';
+    return;
+  }
+  const units = building.units.split(',');
+  sel.innerHTML = units.map(u => `<option value="${u}">${u}</option>`).join('');
+}
+
+function selectZone(code, btn) {
+  selectedZone = code;
+  document.querySelectorAll('.zone-btn').forEach(b => {
+    b.classList.remove('bg-neutral-900', 'text-white', 'border-neutral-900');
+    b.classList.add('border-neutral-200');
+  });
+  btn.classList.add('bg-neutral-900', 'text-white', 'border-neutral-900');
+  btn.classList.remove('border-neutral-200');
+}
+
+async function submitProfile() {
+  const nickname = document.getElementById('profile-nickname').value.trim();
+  const building = document.getElementById('profile-building').value;
+  const unit = document.getElementById('profile-unit').value;
+  if (!nickname) return alert('请输入昵称');
+  if (!building) return alert('请选择楼栋');
+  if (!selectedZone) return alert('请选择常用停车区域');
+  try {
+    await api('PUT', '/me', { nickname, building, unit, preferred_zone: selectedZone });
+    // 重新加载用户
+    await loadUser();
+  } catch (e) {
+    alert(e.message || '保存失败');
+  }
+}
+
+// ========== 附近可借车位 ==========
+async function loadNearbySpots() {
+  if (!currentUser) return;
+  try {
+    const spots = await api('GET', '/spots/nearby?limit=5');
+    const container = document.getElementById('nearby-spots');
+    if (!container) return;
+    if (!spots.length) {
+      container.innerHTML = '<div class="text-sm text-neutral-400 text-center py-4">暂无可借车位</div>';
+      return;
+    }
+    container.innerHTML = spots.map(s => `
+      <div class="flex items-center justify-between py-2 border-b border-neutral-100 last:border-0 cursor-pointer hover:bg-neutral-50" onclick="showSpotDetail(${s.id})">
+        <div>
+          <span class="text-sm font-medium">${s.spot_code}</span>
+          <span class="text-xs ml-2 text-neutral-400">${s.owner_name || ''} ${s.owner_building || ''}</span>
+          ${s.zone === currentUser.preferred_zone ? '<span class="text-xs ml-1 text-amber-600">⭐同区域</span>' : ''}
+        </div>
+        <span class="text-sm font-semibold text-emerald-600">¥${s.price_hour}/h</span>
+      </div>
+    `).join('');
+  } catch {}
 }
 
 // ========== 启动 ==========

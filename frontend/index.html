@@ -56,28 +56,64 @@
   <!-- Main -->
   <main class="max-w-lg mx-auto w-full px-4 py-6 flex-grow">
 
-    <!-- View: Home (zone overview) -->
+    <!-- View: Profile (首次登录完善信息) -->
+    <div id="view-profile" class="hidden">
+      <div class="text-center mb-6">
+        <div class="text-4xl mb-3">👋</div>
+        <h2 class="text-xl font-bold">完善你的信息</h2>
+        <p class="text-sm text-neutral-400 mt-1">帮助邻居找到你</p>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="text-sm font-medium text-neutral-700 mb-1 block">昵称</label>
+          <input id="profile-nickname" type="text" placeholder="如：20幢小王" maxlength="20"
+            class="w-full px-4 py-3 rounded-xl border border-neutral-200 text-sm outline-none focus:border-neutral-400">
+        </div>
+        <div>
+          <label class="text-sm font-medium text-neutral-700 mb-1 block">楼栋</label>
+          <select id="profile-building"
+            class="w-full px-4 py-3 rounded-xl border border-neutral-200 text-sm outline-none focus:border-neutral-400 bg-white">
+            <option value="">选择楼栋</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-neutral-700 mb-1 block">单元</label>
+          <select id="profile-unit"
+            class="w-full px-4 py-3 rounded-xl border border-neutral-200 text-sm outline-none focus:border-neutral-400 bg-white">
+            <option value="">先选择楼栋</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-neutral-700 mb-1 block">常用停车区域</label>
+          <p class="text-xs text-neutral-400 mb-2">选一个你平时停车的区域，首页会优先展示该区域的车位</p>
+          <div id="profile-zones" class="grid grid-cols-4 gap-2"></div>
+        </div>
+        <button onclick="submitProfile()" class="w-full py-3 rounded-xl bg-neutral-900 text-white text-sm font-semibold hover:bg-neutral-800 transition-colors mt-4">
+          完成
+        </button>
+      </div>
+    </div>
+
+    <!-- View: Home (附近车位 + 我的车位 + 最近借用) -->
     <div id="view-home">
-      <!-- Stats -->
-      <div class="grid grid-cols-3 gap-3 mb-6">
-        <div class="bg-white rounded-2xl border border-neutral-200/50 p-4 text-center">
-          <div class="text-2xl font-bold text-emerald-600" id="stat-available">-</div>
-          <div class="text-xs text-neutral-400 mt-1">可借用</div>
-        </div>
-        <div class="bg-white rounded-2xl border border-neutral-200/50 p-4 text-center">
-          <div class="text-2xl font-bold text-neutral-800" id="stat-occupied">-</div>
-          <div class="text-xs text-neutral-400 mt-1">使用中</div>
-        </div>
-        <div class="bg-white rounded-2xl border border-neutral-200/50 p-4 text-center">
-          <div class="text-2xl font-bold text-neutral-400" id="stat-total">-</div>
-          <div class="text-xs text-neutral-400 mt-1">总车位</div>
+
+      <!-- 附近可借车位 -->
+      <div class="mb-6">
+        <h3 class="text-sm font-semibold text-neutral-900 mb-3 flex items-center gap-2">
+          📍 附近可借车位
+          <span id="nearby-zone-label" class="text-xs text-neutral-400 font-normal"></span>
+        </h3>
+        <div class="bg-white rounded-2xl border border-neutral-200/50 overflow-hidden">
+          <div id="nearby-spots" class="px-4">
+            <div class="text-sm text-neutral-400 text-center py-4">登录后查看附近车位</div>
+          </div>
         </div>
       </div>
 
-      <!-- Search -->
-      <div class="mb-4">
+      <!-- 搜索 -->
+      <div class="mb-6">
         <div class="relative">
-          <input id="search-input" type="text" placeholder="搜索车位号（如 E-050）" 
+          <input id="search-input" type="text" placeholder="搜索车位号（如 A050）"
             class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-neutral-200 text-sm outline-none focus:border-neutral-400 bg-white"
             oninput="handleSearch(this.value)">
           <iconify-icon icon="solar:magnifer-linear" class="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"></iconify-icon>
@@ -85,37 +121,18 @@
         <div id="search-results" class="hidden mt-2 bg-white rounded-xl border border-neutral-200/50 overflow-hidden"></div>
       </div>
 
-      <!-- Zone Cards -->
-      <div id="zone-cards" class="space-y-3"></div>
-    </div>
-
-    <!-- View: Zone Detail -->
-    <div id="view-zone" class="hidden">
-      <button onclick="goHome()" class="flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-900 mb-4 transition-colors">
-        <iconify-icon icon="solar:arrow-left-linear"></iconify-icon>
-        返回
-      </button>
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-bold" id="zone-title">E 区</h2>
-        <div class="flex items-center gap-3 text-xs text-neutral-400">
-          <div class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-neutral-100 border border-neutral-200"></span> 未认领</div>
-          <div class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-50 border border-emerald-200"></span> 可借用</div>
-          <div class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-50 border border-red-200"></span> 使用中</div>
+      <!-- 我的车位（登录后显示） -->
+      <div id="my-section" class="hidden space-y-4">
+        <div class="bg-white rounded-2xl border border-neutral-200/50 p-5">
+          <h3 class="text-sm font-semibold text-neutral-900 mb-3">🚗 我的车位</h3>
+          <div id="my-spots" class="text-sm text-neutral-400">暂未绑定车位</div>
+        </div>
+        <div class="bg-white rounded-2xl border border-neutral-200/50 p-5">
+          <h3 class="text-sm font-semibold text-neutral-900 mb-3">📋 最近借用</h3>
+          <div id="my-borrows" class="text-sm text-neutral-400">暂无记录</div>
         </div>
       </div>
-      <div id="spots-container" class="bg-white rounded-2xl border border-neutral-200/50 p-4 min-h-[200px]"></div>
-    </div>
 
-    <!-- My Section (visible when logged in) -->
-    <div id="my-section" class="hidden mt-6 space-y-4">
-      <div class="bg-white rounded-2xl border border-neutral-200/50 p-5">
-        <h3 class="text-sm font-semibold text-neutral-900 mb-3">我的车位</h3>
-        <div id="my-spots" class="text-sm text-neutral-400">暂未绑定车位</div>
-      </div>
-      <div class="bg-white rounded-2xl border border-neutral-200/50 p-5">
-        <h3 class="text-sm font-semibold text-neutral-900 mb-3">我的借用</h3>
-        <div id="my-borrows" class="text-sm text-neutral-400">暂无记录</div>
-      </div>
     </div>
 
   </main>
