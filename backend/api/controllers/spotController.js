@@ -129,7 +129,9 @@ exports.shareSpotById = (req, res) => {
   const db = getDb();
   const spot = db.prepare('SELECT * FROM spots WHERE id = ? AND owner_id = ?').get(req.params.id, req.user.id);
   if (!spot) return res.status(404).json({ error: '车位不存在或不属于你' });
-  db.prepare("UPDATE spots SET status = 'available' WHERE id = ?").run(spot.id);
+  const { price_hour, price_cap } = req.body;
+  db.prepare("UPDATE spots SET status = 'available', price_hour = ?, price_cap = ? WHERE id = ?")
+    .run(price_hour || 4, price_cap || 20, spot.id);
   res.json({ message: '已发布共享' });
 };
 

@@ -222,7 +222,11 @@ async function loadMySpots() {
 }
 
 async function shareSpot(id) {
-  await api('POST', `/spots/${id}/share`);
+  const price = prompt('设置小时价格（默认4元）：', '4');
+  if (price === null) return;
+  const cap = prompt('设置封顶价格（默认20元）：', '20');
+  if (cap === null) return;
+  await api('POST', `/spots/${id}/share`, { price_hour: parseFloat(price) || 4, price_cap: parseFloat(cap) || 20 });
   loadMySpots();
   loadNearbySpots();
 }
@@ -242,21 +246,25 @@ async function submitVerify() {
   const spotCode = document.getElementById('verify-spot-code').value.trim().toUpperCase();
   const fileInput = document.getElementById('verify-file');
   if (!spotCode) return alert('请输入车位编号');
-  if (!fileInput.files[0]) return alert('请上传车位租售合同照片');
 
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const image = e.target.result;
-    try {
-      await api('POST', '/spots/bind', { spot_code: spotCode, contract_image: image });
-      closeModal();
-      alert('提交成功！AI 正在验证合同，通过后自动绑定。');
-      loadMySpots();
-    } catch (e) {
-      alert(e.message || '提交失败');
-    }
-  };
-  reader.readAsDataURL(fileInput.files[0]);
+  let image = '';
+  if (fileInput.files[0]) {
+    image = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.readAsDataURL(fileInput.files[0]);
+    });
+  }
+
+  try {
+    await api('POST', '/spots/bind', { spot_code: spotCode, contract_image: image });
+    closeModal();
+    alert('车位绑定成功！');
+    loadMySpots();
+    loadNearbySpots();
+  } catch (e) {
+    alert(e.message || '提交失败');
+  }
 }
 
 // ========== 我的借用 ==========
@@ -268,16 +276,75 @@ async function loadMyBorrows() {
       el.innerHTML = '<div class="text-sm text-neutral-400">暂无记录</div>';
       return;
     }
-    el.innerHTML = res.map(b => `
-      <div class="flex items-center justify-between py-2 border-b border-neutral-100 last:border-0">
-        <div>
-          <div class="text-sm font-medium">${b.spot_code}</div>
-          <div class="text-xs text-neutral-400">${b.borrower_id === currentUser.id ? '我借用' : '被借用'} · ${statusText(b.status)}</div>
+    el.innerHTML = res.map(b => {
+      const isOwner = b.owner_id === currentUser.id;
+      const isActive = b.status === 'active';
+      const notifyBtn = (isOwner && isActive) ? `
+        <button onclick="copyNotifyText(${b.id})" class="text-xs text-blue-600 font-medium hover:text-blue-700 mt-1">
+          📋 通知管家
+        </button>
+      ` : '';
+      const acceptBtn = (isOwner && b.status === 'pending') ? `
+        <button onclick="acceptBorrow(${b.id})" class="text-xs text-emerald-600 font-medium hover:text-emerald-700">确认</button>
+      ` : '';
+      const doneBtn = (isOwner && isActive) ? `
+        <button onclick="doneBorrow(${b.id})" class="text-xs text-neutral-500 font-medium hover:text-neutral-700">结束</button>
+      ` : '';
+      return `
+        <div class="py-2 border-b border-neutral-100 last:border-0">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium">${b.spot_code || '车位'}</div>
+              <div class="text-xs text-neutral-400">${isOwner ? '被借用' : '我借用'} · ${statusText(b.status)}</div>
+            </div>
+            <div class="flex items-center gap-2">
+              ${acceptBtn} ${doneBtn}
+              ${b.total_price ? '<span class="text-sm font-semibold text-neutral-900">¥' + b.total_price + '</span>' : statusBadge(b.status)}
+            </div>
+          </div>
+          ${notifyBtn}
         </div>
-        <div class="text-sm font-semibold text-neutral-900">${b.total_price ? '¥' + b.total_price : statusBadge(b.status)}</div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   } catch {}
+}
+
+async function acceptBorrow(id) {
+  try {
+    await api('POST', `/borrows/${id}/accept`);
+    alert('已确认');
+    loadMyBorrows();
+    loadNearbySpots();
+  } catch (e) { alert(e.message); }
+}
+
+async function doneBorrow(id) {
+  try {
+    const res = await api('POST', `/borrows/${id}/done`);
+    alert('借用结束，费用：¥' + (res.total_price || 0));
+    loadMyBorrows();
+    loadNearbySpots();
+  } catch (e) { alert(e.message); }
+}
+
+function copyNotifyText(borrowId) {
+  // Generate notification text from current borrow data
+  const b = currentUser;
+  const text = `您好，我是${b.building}${b.unit}的业主${b.nickname}。
+我的车位已借给邻居使用。
+麻烦知悉，谢谢！`;
+  navigator.clipboard.writeText(text).then(() => {
+    alert('已复制，发给管家吧！');
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('已复制，发给管家吧！');
+  });
 }
 
 // ========== 工具 ==========
