@@ -86,8 +86,18 @@ function migrate() {
   // 导入楼栋数据
   const buildingCount = db.prepare("SELECT COUNT(*) as c FROM buildings").get().c;
   if (buildingCount === 0) {
-    console.log('⚠️  buildings 表为空，请提供楼栋数据后导入');
-    console.log('   提示：用 INSERT INTO buildings (name, units, sort_order) VALUES (...) 手动添加');
+    console.log('Inserting building data...');
+    const insertBuilding = db.prepare("INSERT INTO buildings (name, units, sort_order) VALUES (?, ?, ?)");
+    const singleUnit = [4, 5, 9, 16, 18]; // 1单元的楼栋
+    const insertMany = db.transaction(() => {
+      for (let i = 1; i <= 20; i++) {
+        const units = singleUnit.includes(i) ? '1单元' : '1单元,2单元';
+        insertBuilding.run(i + '幢', units, i);
+      }
+    });
+    insertMany();
+    migrated = true;
+    console.log('✅ buildings 表：20 幢楼数据已导入');
   }
 
   if (!migrated) {
