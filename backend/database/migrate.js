@@ -83,46 +83,11 @@ function migrate() {
     console.log('✅ zones 表创建完成，7 个区域已导入');
   }
 
-  // 导入楼栋数据（示例，后续用户补充）
+  // 导入楼栋数据
   const buildingCount = db.prepare("SELECT COUNT(*) as c FROM buildings").get().c;
   if (buildingCount === 0) {
-    console.log('Inserting building data...');
-    const insertBuilding = db.prepare("INSERT INTO buildings (name, units, sort_order) VALUES (?, ?, ?)");
-    const insertMany = db.transaction((buildings) => {
-      for (const b of buildings) insertBuilding.run(b.name, b.units, b.sort);
-    });
-    // 示例数据：单单元楼 + 双单元楼
-    insertMany([
-      { name: '1幢', units: '1单元', sort: 1 },
-      { name: '2幢', units: '1单元', sort: 2 },
-      { name: '3幢', units: '1单元', sort: 3 },
-      { name: '5幢', units: '1单元', sort: 5 },
-      { name: '6幢', units: '1单元', sort: 6 },
-      { name: '7幢', units: '1单元', sort: 7 },
-      { name: '8幢', units: '1单元', sort: 8 },
-      { name: '9幢', units: '1单元', sort: 9 },
-      { name: '10幢', units: '1单元,2单元', sort: 10 },
-      { name: '11幢', units: '1单元,2单元', sort: 11 },
-      { name: '12幢', units: '1单元,2单元', sort: 12 },
-      { name: '13幢', units: '1单元,2单元', sort: 13 },
-      { name: '15幢', units: '1单元,2单元', sort: 15 },
-      { name: '16幢', units: '1单元,2单元', sort: 16 },
-      { name: '17幢', units: '1单元,2单元', sort: 17 },
-      { name: '18幢', units: '1单元,2单元', sort: 18 },
-      { name: '19幢', units: '1单元,2单元', sort: 19 },
-      { name: '20幢', units: '1单元,2单元', sort: 20 },
-      { name: '21幢', units: '1单元,2单元', sort: 21 },
-      { name: '22幢', units: '1单元,2单元', sort: 22 },
-      { name: '23幢', units: '1单元,2单元', sort: 23 },
-      { name: '25幢', units: '1单元,2单元', sort: 25 },
-      { name: '26幢', units: '1单元,2单元', sort: 26 },
-      { name: '27幢', units: '1单元,2单元', sort: 27 },
-      { name: '28幢', units: '1单元,2单元', sort: 28 },
-      { name: '29幢', units: '1单元,2单元', sort: 29 },
-      { name: '30幢', units: '1单元,2单元', sort: 30 },
-    ]);
-    migrated = true;
-    console.log('✅ buildings 表：27 幢楼数据已导入（示例，请核实后补充）');
+    console.log('⚠️  buildings 表为空，请提供楼栋数据后导入');
+    console.log('   提示：用 INSERT INTO buildings (name, units, sort_order) VALUES (...) 手动添加');
   }
 
   if (!migrated) {
@@ -133,12 +98,13 @@ function migrate() {
 
   // 打印当前表结构
   console.log('\n📊 当前数据库状态：');
-  const count = (table) => db.prepare(`SELECT COUNT(*) as c FROM ${table}`).get().c;
-  console.log(`  users: ${count('users')} 条`);
-  console.log(`  spots: ${count('spots')} 条`);
-  console.log(`  borrows: ${count('borrows')} 条`);
-  console.log(`  buildings: ${count('buildings')} 条`);
-  console.log(`  zones: ${count('zones')} 条`);
+  const countTables = ['users', 'spots', 'borrows', 'buildings', 'zones'];
+  for (const table of countTables) {
+    try {
+      const c = db.prepare(`SELECT COUNT(*) as c FROM ${table}`).get().c;
+      console.log(`  ${table}: ${c} 条`);
+    } catch { console.log(`  ${table}: (不存在)`); }
+  }
 }
 
 migrate();
