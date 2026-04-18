@@ -58,9 +58,47 @@ exports.wechatCallback = async (req, res) => {
 // 获取当前用户
 exports.getMe = (req, res) => {
   const db = getDb();
-  const user = db.prepare('SELECT id, nickname, avatar, phone, building, room, verified, is_admin, credit FROM users WHERE id = ?').get(req.user.id);
+  const user = db.prepare('SELECT id, nickname, avatar, phone, building, unit, preferred_zone, verified, is_admin, credit FROM users WHERE id = ?').get(req.user.id);
   if (!user) return res.status(404).json({ error: '用户不存在' });
   res.json(user);
+};
+
+// 更新用户信息
+exports.updateMe = (req, res) => {
+  const db = getDb();
+  const { nickname, building, unit, preferred_zone } = req.body;
+
+  // 校验昵称
+  if (nickname !== undefined && !nickname.trim()) {
+    return res.status(400).json({ error: '昵称不能为空' });
+  }
+
+  // 校验楼栋（如果提供了）
+  if (building) {
+    const b = db.prepare('SELECT id FROM buildings WHERE name = ?').get(building);
+    if (!b) return res.status(400).json({ error: '楼栋不存在' });
+  }
+
+  // 校验区域（如果提供了）
+  if (preferred_zone) {
+    const z = db.prepare('SELECT id FROM zones WHERE code = ?').get(preferred_zone);
+    if (!z) return res.status(400).json({ error: '区域不存在' });
+  }
+
+  // 动态构建更新
+  const updates = [];
+  const params = [];
+  if (nickname !== undefined) { updates.push('nickname = ?'); params.push(nickname.trim()); }
+  if (building !== undefined) { updates.push('building = ?'); params.push(building); }
+  if (unit !== undefined) { updates.push('unit = ?'); params.push(unit); }
+  if (preferred_zone !== undefined) { updates.push('preferred_zone = ?'); params.push(preferred_zone); }
+
+  if (updates.length === 0) return res.status(400).json({ error: '没有要更新的字段' });
+
+  params.push(req.user.id);
+  db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+
+  res.json({ message: '更新成功' });
 };
 
 // 提交认证凭证
@@ -75,4 +113,18 @@ exports.submitVerify = (req, res) => {
   ).run(req.user.id, image, 'pending');
 
   res.json({ id: result.lastInsertRowid, message: '已提交，等待管理员审核' });
+};
+
+// 获取楼栋列表
+exports.getBuildings = (req, res) => {
+  const db = getDb();
+  const buildings = db.prepare('SELECT id, name, units FROM buildings ORDER BY sort_order').all();
+  res.json(buildings);
+};
+
+// 获取区域列表
+exports.getZones = (req, res) => {
+  const db = getDb();
+  const zones = db.prepare('SELECT id, code, label, floor FROM zones ORDER BY sort_order').all();
+  res.json(zones);
 };

@@ -1,9 +1,45 @@
 const { getDb } = require('../../database/init');
 
-// 公开统计：按区域返回车位数量
+// 附近可借车位（按常用区域排序）
+exports.nearby = (req, res) => {
+  const db = getDb();
+  const limit = parseInt(req.query.limit) || 5;
+
+  // 获取用户的常用区域
+  const user = db.prepare('SELECT preferred_zone FROM users WHERE id = ?').get(req.user.id);
+  const zone = user ? user.preferred_zone : '';
+
+  let spots;
+  if (zone) {
+    // 同区域优先
+    spots = db.prepare(`
+      SELECT s.*, u.nickname as owner_name, u.building as owner_building, u.unit as owner_unit
+      FROM spots s LEFT JOIN users u ON s.owner_id = u.id
+      WHERE s.status = 'available' AND s.owner_id != ?
+      ORDER BY
+        CASE WHEN s.zone = ? THEN 0 ELSE 1 END,
+        s.price_hour ASC
+      LIMIT ?
+    `).all(req.user.id, zone, limit);
+  } else {
+    // 未设置常用区域，返回所有可用车位
+    spots = db.prepare(`
+      SELECT s.*, u.nickname as owner_name, u.building as owner_building, u.unit as owner_unit
+      FROM spots s LEFT JOIN users u ON s.owner_id = u.id
+      WHERE s.status = 'available' AND s.owner_id != ?
+      ORDER BY s.price_hour ASC
+      LIMIT ?
+    `).all(req.user.id, limit);
+  }
+
+  res.json(spots);
+};
+
+// 公开统计：动态按区域返回车位数量
 exports.stats = (req, res) => {
   const db = getDb();
-  const zones = ['E', 'F', 'G'];
+  // 从 zones 表动态获取所有区域
+  const zones = db.prepare('SELECT code FROM zones ORDER BY sort_order').all().map(z => z.code);
   const result = { all: { total: 0, available: 0, occupied: 0 } };
 
   zones.forEach(z => {

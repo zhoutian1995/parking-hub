@@ -19,9 +19,15 @@ router.get('/wechat/callback', userController.wechatCallback);
 
 // 用户（需登录）
 router.get('/me', authMiddleware, userController.getMe);
+router.put('/me', authMiddleware, userController.updateMe);
 router.post('/me/verify', authMiddleware, userController.submitVerify);
 
+// 公开数据
+router.get('/buildings', userController.getBuildings);
+router.get('/zones', userController.getZones);
+
 // === 车位特定路由（必须在 :id 之前） ===
+router.get('/spots/nearby', authMiddleware, spotController.nearby);  // 附近车位（需登录）
 router.get('/spots/stats', spotController.stats);           // 区域统计（公开）
 router.get('/spots/search', spotController.search);         // 搜索（公开）
 router.get('/spots/mine', authMiddleware, spotController.mySpots);     // 我的车位
