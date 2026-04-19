@@ -74,12 +74,17 @@ exports.accept = (req, res) => {
 // 完成借用
 exports.done = (req, res) => {
   const db = getDb();
-  const borrow = db.prepare("SELECT * FROM borrows WHERE id = ? AND status = 'active' AND owner_id = ?").get(req.params.id, req.user.id);
+  const borrow = db.prepare(`
+    SELECT b.*, s.price_cap 
+    FROM borrows b JOIN spots s ON b.spot_id = s.id
+    WHERE b.id = ? AND b.status = 'active' AND b.owner_id = ?
+  `).get(req.params.id, req.user.id);
   if (!borrow) return res.status(400).json({ error: '借用记录不存在', code: 'NOT_FOUND' });
 
   const startTime = new Date(borrow.start_time);
   const hours = Math.max(1, Math.ceil((Date.now() - startTime.getTime()) / 3600000));
-  const total = Math.min(hours * borrow.price_hour, 20);
+  const cap = borrow.price_cap || 20;
+  const total = Math.min(hours * borrow.price_hour, cap);
 
   db.prepare("UPDATE borrows SET status = 'done', end_time = datetime('now','localtime'), total_price = ? WHERE id = ?").run(total, borrow.id);
   db.prepare("UPDATE spots SET status = 'available' WHERE id = ?").run(borrow.spot_id);

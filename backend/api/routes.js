@@ -1,11 +1,18 @@
 const express = require('express');
 const router = express.Router();
+const config = require('../config');
 const userController = require('./controllers/userController');
 const spotController = require('./controllers/spotController');
 const borrowController = require('./controllers/borrowController');
 const adminController = require('./controllers/adminController');
 const authController = require('./controllers/authController');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+
+// 测试接口环境守卫 — 生产环境直接 404
+function devOnly(req, res, next) {
+  if (config.env === 'production') return res.status(404).json({ error: 'Not found' });
+  next();
+}
 
 // 健康检查
 router.get('/health', (req, res) => res.json({ status: 'ok' }));
@@ -17,9 +24,9 @@ router.post('/auth/login', authController.phoneLogin);
 router.get('/auth/wechat', authController.wechatAuth);
 router.get('/auth/wechat/callback', authController.wechatCallback);
 
-// 测试面板
-router.get('/test/accounts', authController.testAccounts);
-router.post('/test/login', authController.testLogin);
+// 测试面板（仅开发环境）
+router.get('/test/accounts', devOnly, authController.testAccounts);
+router.post('/test/login', devOnly, authController.testLogin);
 
 // 微信登录（保留）
 router.get('/wechat/login', userController.wechatLogin);

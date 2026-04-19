@@ -6,6 +6,12 @@ const { initDatabase } = require('./database/init');
 const apiRoutes = require('./api/routes');
 const config = require('./config');
 
+// 启动安全检查
+if (config.env === 'production' && config.jwt.secret === 'dev-secret') {
+  console.error('❌ FATAL: 生产环境禁止使用默认 JWT_SECRET，请配置环境变量 JWT_SECRET');
+  process.exit(1);
+}
+
 const app = express();
 const PORT = config.port;
 

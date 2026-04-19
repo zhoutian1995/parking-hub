@@ -367,7 +367,10 @@ async function handlePublish() {
     return toast('请先到个人资料设置收款方式', 'error');
   }
   try {
-    await api('POST', `/spots/${spotId}/share`, { price_hour: price, price_cap: cap, notes });
+    await api('POST', `/spots/${spotId}/share`, {
+      price_hour: price, price_cap: cap, notes,
+      qr_alipay: currentUser.qr_alipay || '', qr_wechat: currentUser.qr_wechat || ''
+    });
     toast('发布成功！'); navigate('home');
   } catch (e) { toast(e.message || '发布失败', 'error'); }
 }
