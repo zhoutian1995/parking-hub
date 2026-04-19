@@ -1,5 +1,30 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="12" fill="#171717"/>
-  <path d="M20 44 L32 20 L44 44" stroke="#4ADE80" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M26 36 L32 28 L38 36" stroke="#FBBF24" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 260">
+  <!-- 背景 -->
+  <rect width="200" height="260" fill="#FDFDFB"/>
+  
+  <!-- 中心图标区域 -->
+  <g transform="translate(100, 95)">
+    <!-- 四角括号 -->
+    <!-- 左上 -->
+    <path d="M-50,-50 L-20,-50 L-20,-42 L-42,-42 L-42,-20 L-50,-20 Z" fill="#171717"/>
+    <!-- 右上 -->
+    <path d="M50,-50 L20,-50 L20,-42 L42,-42 L42,-20 L50,-20 Z" fill="#171717"/>
+    <!-- 左下 -->
+    <path d="M-50,50 L-20,50 L-20,42 L-42,42 L-42,20 L-50,20 Z" fill="#171717"/>
+    <!-- 右下 -->
+    <path d="M50,50 L20,50 L20,42 L42,42 L42,20 L50,20 Z" fill="#171717"/>
+    
+    <!-- 中心十字箭头 -->
+    <!-- 垂直箭头 -->
+    <path d="M0,-48 L-8,-34 L-3,-34 L-3,34 L-8,34 L0,48 L8,34 L3,34 L3,-34 L8,-34 Z" fill="#171717"/>
+    <!-- 水平箭头 -->
+    <path d="M-48,0 L-34,-8 L-34,-3 L34,-3 L34,-8 L48,0 L34,8 L34,3 L-34,3 L-34,8 Z" fill="#171717"/>
+    
+    <!-- 绿色中心点 -->
+    <circle cx="0" cy="0" r="5" fill="#22C55E"/>
+  </g>
+  
+  <!-- 文字 -->
+  <text x="100" y="175" text-anchor="middle" font-family="'Noto Sans SC','Helvetica Neue',Arial,sans-serif" font-weight="700" font-size="22" fill="#171717">JNZX | 江南之星</text>
+  <text x="100" y="200" text-anchor="middle" font-family="'Noto Sans SC','Helvetica Neue',Arial,sans-serif" font-weight="400" font-size="13" fill="#525252">邻里车位枢纽</text>
 </svg>
