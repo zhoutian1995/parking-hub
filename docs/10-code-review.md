@@ -99,7 +99,7 @@
 | **P0** | 测试接口加环境保护 | `backend/api/routes.js` | `/test/*` 路由加 `config.env === 'development'` 判断，生产环境返回 404 |
 | **P0** | 函数名不匹配导致收款码上传失效 | `frontend/index.html:197` | `handleProfileQR` 改为 `previewProfileQR`（与 app.js 一致） |
 | **P0** | 发布车位会 400 失败 | `frontend/js/app.js:369` | handlePublish 需要从 currentUser 传入收款码数据到 `/spots/:id/share` |
-| **P1** | 计费硬编码 20 元 | `backend/api/controllers/borrowController.js:81` | 用 `borrow.price_cap` 替代硬编码的 20 |
+| **P1** | 计费硬编码 20 元 | `backend/api/controllers/borrowController.js:82` | `borrows` 表未保存 `price_cap`，需查询对应 spot 的 `price_cap` 替代硬编码的 20 |
 | **P1** | JWT_SECRET 启动检测 | `backend/config/index.js` | 生产环境启动时检测是否使用了默认值 `'dev-secret'`，是则拒绝启动 |
 
 ---
