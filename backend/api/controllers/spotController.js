@@ -16,6 +16,7 @@ exports.nearby = (req, res) => {
       SELECT s.*, u.nickname as owner_name, u.building as owner_building, u.unit as owner_unit
       FROM spots s LEFT JOIN users u ON s.owner_id = u.id
       WHERE s.status = 'available' AND s.owner_id != ?
+        AND NOT EXISTS (SELECT 1 FROM borrows b WHERE b.spot_id = s.id AND b.status IN ('pending','active'))
       ORDER BY
         CASE WHEN s.zone = ? THEN 0 ELSE 1 END,
         s.price_hour ASC
@@ -27,6 +28,7 @@ exports.nearby = (req, res) => {
       SELECT s.*, u.nickname as owner_name, u.building as owner_building, u.unit as owner_unit
       FROM spots s LEFT JOIN users u ON s.owner_id = u.id
       WHERE s.status = 'available' AND s.owner_id != ?
+        AND NOT EXISTS (SELECT 1 FROM borrows b WHERE b.spot_id = s.id AND b.status IN ('pending','active'))
       ORDER BY s.price_hour ASC
       LIMIT ?
     `).all(req.user.id, limit);
@@ -129,9 +131,10 @@ exports.shareSpotById = (req, res) => {
   const db = getDb();
   const spot = db.prepare('SELECT * FROM spots WHERE id = ? AND owner_id = ?').get(req.params.id, req.user.id);
   if (!spot) return res.status(404).json({ error: '车位不存在或不属于你' });
-  const { price_hour, price_cap } = req.body;
-  db.prepare("UPDATE spots SET status = 'available', price_hour = ?, price_cap = ? WHERE id = ?")
-    .run(price_hour || 4, price_cap || 20, spot.id);
+  const { price_hour, price_cap, notes, qr_alipay, qr_wechat } = req.body;
+  if (!qr_alipay && !qr_wechat) return res.status(400).json({ error: '请至少上传一个收款码' });
+  db.prepare("UPDATE spots SET status = 'available', price_hour = ?, price_cap = ?, notes = ?, qr_alipay = ?, qr_wechat = ? WHERE id = ?")
+    .run(price_hour || 4, price_cap || 20, notes || '', qr_alipay || '', qr_wechat || '', spot.id);
   res.json({ message: '已发布共享' });
 };
 

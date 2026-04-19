@@ -13,6 +13,14 @@ router.get('/health', (req, res) => res.json({ status: 'ok' }));
 // 手机号登录/注册
 router.post('/auth/login', authController.phoneLogin);
 
+// 微信授权
+router.get('/auth/wechat', authController.wechatAuth);
+router.get('/auth/wechat/callback', authController.wechatCallback);
+
+// 测试面板
+router.get('/test/accounts', authController.testAccounts);
+router.post('/test/login', authController.testLogin);
+
 // 微信登录（保留）
 router.get('/wechat/login', userController.wechatLogin);
 router.get('/wechat/callback', userController.wechatCallback);

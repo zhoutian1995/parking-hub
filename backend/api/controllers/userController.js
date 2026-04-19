@@ -58,7 +58,7 @@ exports.wechatCallback = async (req, res) => {
 // 获取当前用户
 exports.getMe = (req, res) => {
   const db = getDb();
-  const user = db.prepare('SELECT id, nickname, avatar, phone, building, unit, preferred_zone, verified, is_admin, credit FROM users WHERE id = ?').get(req.user.id);
+  const user = db.prepare('SELECT id, nickname, avatar, phone, building, unit, preferred_zone, verified, is_admin, credit, wechat_id, wechat_qr, contact_phone, qr_alipay, qr_wechat FROM users WHERE id = ?').get(req.user.id);
   if (!user) return res.status(404).json({ error: '用户不存在' });
   res.json(user);
 };
@@ -66,7 +66,7 @@ exports.getMe = (req, res) => {
 // 更新用户信息
 exports.updateMe = (req, res) => {
   const db = getDb();
-  const { nickname, building, unit, preferred_zone } = req.body;
+  const { nickname, building, unit, preferred_zone, wechat_id, contact_phone, qr_alipay, qr_wechat } = req.body;
 
   // 校验昵称
   if (nickname !== undefined && !nickname.trim()) {
@@ -92,6 +92,10 @@ exports.updateMe = (req, res) => {
   if (building !== undefined) { updates.push('building = ?'); params.push(building); }
   if (unit !== undefined) { updates.push('unit = ?'); params.push(unit); }
   if (preferred_zone !== undefined) { updates.push('preferred_zone = ?'); params.push(preferred_zone); }
+  if (wechat_id !== undefined) { updates.push('wechat_id = ?'); params.push(wechat_id); }
+  if (contact_phone !== undefined) { updates.push('contact_phone = ?'); params.push(contact_phone); }
+  if (qr_alipay !== undefined) { updates.push('qr_alipay = ?'); params.push(qr_alipay); }
+  if (qr_wechat !== undefined) { updates.push('qr_wechat = ?'); params.push(qr_wechat); }
 
   if (updates.length === 0) return res.status(400).json({ error: '没有要更新的字段' });
 
