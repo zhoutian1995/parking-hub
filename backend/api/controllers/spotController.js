@@ -38,23 +38,23 @@ exports.nearby = asyncHandler(async (req, res) => {
   res.json(spots);
 });
 
-// 公开统计：动态按区域返回车位数量
+// 公开统计：动态按区域返回车位数量（N5 优化：单条 SQL）
 exports.stats = (req, res) => {
   const db = getDb();
-  // 从 zones 表动态获取所有区域
   const zones = db.prepare('SELECT code FROM zones ORDER BY sort_order').all().map(z => z.code);
+  // 单条 SQL 查询所有区域+状态的计数
+  const rows = db.prepare("SELECT zone, status, COUNT(*) as c FROM spots GROUP BY zone, status").all();
   const result = { all: { total: 0, available: 0, occupied: 0 } };
-
-  zones.forEach(z => {
-    const total = db.prepare('SELECT COUNT(*) as c FROM spots WHERE zone = ?').get(z).c;
-    const available = db.prepare("SELECT COUNT(*) as c FROM spots WHERE zone = ? AND status = 'available'").get(z).c;
-    const occupied = db.prepare("SELECT COUNT(*) as c FROM spots WHERE zone = ? AND status = 'occupied'").get(z).c;
-    result[z] = { total, available, occupied };
-    result.all.total += total;
-    result.all.available += available;
-    result.all.occupied += occupied;
+  zones.forEach(z => { result[z] = { total: 0, available: 0, occupied: 0 }; });
+  rows.forEach(r => {
+    if (result[r.zone]) {
+      result[r.zone].total += r.c;
+      result[r.zone][r.status] = (result[r.zone][r.status] || 0) + r.c;
+      result.all.total += r.c;
+      if (r.status === 'available') result.all.available += r.c;
+      if (r.status === 'occupied') result.all.occupied += r.c;
+    }
   });
-
   res.json(result);
 };
 
@@ -133,10 +133,12 @@ exports.shareSpotById = (req, res) => {
   const db = getDb();
   const spot = db.prepare('SELECT * FROM spots WHERE id = ? AND owner_id = ?').get(req.params.id, req.user.id);
   if (!spot) return res.status(404).json({ error: '车位不存在或不属于你' });
-  const { price_hour, price_cap, notes, qr_alipay, qr_wechat } = req.body;
+  const { price_hour, price_cap, notes, qr_alipay, qr_wechat, available_from, available_until } = req.body;
   if (!qr_alipay && !qr_wechat) return res.status(400).json({ error: '请至少上传一个收款码' });
-  db.prepare("UPDATE spots SET status = 'available', price_hour = ?, price_cap = ?, notes = ?, qr_alipay = ?, qr_wechat = ? WHERE id = ?")
-    .run(price_hour || 4, price_cap || 20, notes || '', qr_alipay || '', qr_wechat || '', spot.id);
+  db.prepare(`UPDATE spots SET status = 'available', price_hour = ?, price_cap = ?, notes = ?,
+    qr_alipay = ?, qr_wechat = ?, available_from = ?, available_until = ? WHERE id = ?`)
+    .run(price_hour || 4, price_cap || 20, notes || '', qr_alipay || '', qr_wechat || '',
+      available_from || '', available_until || '', spot.id);
   res.json({ message: '已发布共享' });
 };
 

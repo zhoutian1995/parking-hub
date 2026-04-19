@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const config = require('../config');
 const userController = require('./controllers/userController');
 const spotController = require('./controllers/spotController');
@@ -7,6 +8,23 @@ const borrowController = require('./controllers/borrowController');
 const adminController = require('./controllers/adminController');
 const authController = require('./controllers/authController');
 const { authMiddleware, optionalAuth, adminMiddleware } = require('../middleware/auth');
+
+// Rate limiting（S4）
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 分钟
+  max: 20, // 每 15 分钟最多 20 次登录尝试
+  message: { error: '请求过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 分钟
+  max: 100, // 每分钟最多 100 次 API 请求
+  message: { error: '请求过于频繁，请稍后再试' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // 测试接口环境守卫 — 生产环境直接 404
 function devOnly(req, res, next) {
@@ -17,8 +35,8 @@ function devOnly(req, res, next) {
 // 健康检查
 router.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-// 手机号登录/注册
-router.post('/auth/login', authController.phoneLogin);
+// 手机号登录/注册（加限流）
+router.post('/auth/login', authLimiter, authController.phoneLogin);
 
 // 微信授权
 router.get('/auth/wechat', authController.wechatAuth);
@@ -27,10 +45,6 @@ router.get('/auth/wechat/callback', authController.wechatCallback);
 // 测试面板
 router.get('/test/accounts', authController.testAccounts);
 router.post('/test/login', authController.testLogin);
-
-// 微信登录（保留）
-router.get('/wechat/login', userController.wechatLogin);
-router.get('/wechat/callback', userController.wechatCallback);
 
 // 用户（需登录）
 router.get('/me', authMiddleware, userController.getMe);

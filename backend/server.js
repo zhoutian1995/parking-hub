@@ -24,7 +24,6 @@ app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
-    if (config.env === 'development') return cb(null, true);
     cb(new Error('CORS'));
   },
   credentials: true

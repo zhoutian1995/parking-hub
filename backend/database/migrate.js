@@ -55,6 +55,15 @@ function migrate() {
     console.log('✅ spots 表 v3 更新完成');
   }
 
+  // v4: 发布时段字段（时间冲突校验用）
+  if (!spotCols.includes('available_from')) {
+    console.log('Adding v4 time columns to spots...');
+    db.prepare("ALTER TABLE spots ADD COLUMN available_from TEXT DEFAULT ''").run();
+    db.prepare("ALTER TABLE spots ADD COLUMN available_until TEXT DEFAULT ''").run();
+    migrated = true;
+    console.log('✅ spots 表 v4 更新完成');
+  }
+
   // 检查 buildings 表是否存在
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(t => t.name);
 

@@ -27,7 +27,20 @@ exports.create = asyncHandler(async (req, res) => {
     return sendError(res, 'ALREADY_APPLIED', msg);
   }
 
-  // 5. 检查车位是否被其他人占用
+  // 5. 时间冲突校验（P3）：如果车位设置了可用时段，检查当前时间是否在时段内
+  if (spot.available_from && spot.available_until) {
+    const now = new Date();
+    const from = new Date(spot.available_from);
+    const until = new Date(spot.available_until);
+    if (now < from) {
+      return sendError(res, 'TIME_CONFLICT', `该车位将于 ${spot.available_from.substring(0,16)} 后才可借用`);
+    }
+    if (now > until) {
+      return sendError(res, 'TIME_EXPIRED', '该车位的共享时段已过期');
+    }
+  }
+
+  // 6. 检查车位是否被其他人占用
   const otherActive = db.prepare(
     "SELECT id FROM borrows WHERE spot_id = ? AND status IN ('pending','active')"
   ).get(spot_id);
