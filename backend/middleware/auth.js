@@ -16,6 +16,17 @@ function authMiddleware(req, res, next) {
   }
 }
 
+// 可选鉴权 — 有 token 解析，没有也不报错
+function optionalAuth(req, res, next) {
+  const auth = req.headers.authorization;
+  if (auth && auth.startsWith('Bearer ')) {
+    try {
+      req.user = jwt.verify(auth.split(' ')[1], config.jwt.secret);
+    } catch { /* token 无效，忽略 */ }
+  }
+  next();
+}
+
 function adminMiddleware(req, res, next) {
   const db = getDb();
   const user = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(req.user.id);
@@ -25,4 +36,4 @@ function adminMiddleware(req, res, next) {
   next();
 }
 
-module.exports = { authMiddleware, adminMiddleware };
+module.exports = { authMiddleware, optionalAuth, adminMiddleware };

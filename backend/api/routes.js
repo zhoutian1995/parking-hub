@@ -6,7 +6,7 @@ const spotController = require('./controllers/spotController');
 const borrowController = require('./controllers/borrowController');
 const adminController = require('./controllers/adminController');
 const authController = require('./controllers/authController');
-const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { authMiddleware, optionalAuth, adminMiddleware } = require('../middleware/auth');
 
 // 测试接口环境守卫 — 生产环境直接 404
 function devOnly(req, res, next) {
@@ -44,7 +44,7 @@ router.get('/zones', userController.getZones);
 // === 车位特定路由（必须在 :id 之前） ===
 router.get('/spots/nearby', authMiddleware, spotController.nearby);  // 附近车位（需登录）
 router.get('/spots/stats', spotController.stats);           // 区域统计（公开）
-router.get('/spots/search', spotController.search);         // 搜索（公开）
+router.get('/spots/search', optionalAuth, spotController.search);         // 搜索（公开，登录后过滤自己）
 router.get('/spots/mine', authMiddleware, spotController.mySpots);     // 我的车位
 router.post('/spots/bind', authMiddleware, spotController.bindSpot);   // 绑定车位
 router.post('/spots/share', authMiddleware, spotController.shareSpot); // 按 code 发布

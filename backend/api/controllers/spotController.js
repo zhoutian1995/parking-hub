@@ -63,11 +63,13 @@ exports.search = (req, res) => {
   const db = getDb();
   const q = (req.query.q || '').trim().toUpperCase();
   if (!q || q.length < 2) return res.json([]);
+  const userId = req.user?.id;
   const spots = db.prepare(
     `SELECT s.*, u.nickname as owner_name 
      FROM spots s LEFT JOIN users u ON s.owner_id = u.id 
-     WHERE s.spot_code LIKE ? ORDER BY s.spot_code LIMIT 20`
-  ).all(`%${q}%`);
+     WHERE s.status = 'available' AND s.spot_code LIKE ? ${userId ? 'AND s.owner_id != ?' : ''}
+     ORDER BY s.spot_code LIMIT 20`
+  ).all(...(userId ? [`%${q}%`, userId] : [`%${q}%`]));
   res.json(spots);
 };
 

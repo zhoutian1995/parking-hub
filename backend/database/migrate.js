@@ -24,6 +24,18 @@ function migrate() {
     console.log('✅ users 表更新完成');
   }
 
+  // v3: 收款码 + 联系方式字段
+  if (!userCols.includes('qr_alipay')) {
+    console.log('Adding v3 columns to users...');
+    db.prepare("ALTER TABLE users ADD COLUMN qr_alipay TEXT DEFAULT ''").run();
+    db.prepare("ALTER TABLE users ADD COLUMN qr_wechat TEXT DEFAULT ''").run();
+    db.prepare("ALTER TABLE users ADD COLUMN wechat_id TEXT DEFAULT ''").run();
+    db.prepare("ALTER TABLE users ADD COLUMN wechat_qr TEXT DEFAULT ''").run();
+    db.prepare("ALTER TABLE users ADD COLUMN contact_phone TEXT DEFAULT ''").run();
+    migrated = true;
+    console.log('✅ users 表 v3 更新完成');
+  }
+
   // 检查 spots 表是否有 contract_image 字段
   const spotCols = db.prepare("PRAGMA table_info(spots)").all().map(c => c.name);
 
@@ -32,6 +44,15 @@ function migrate() {
     db.prepare("ALTER TABLE spots ADD COLUMN contract_image TEXT DEFAULT ''").run();
     migrated = true;
     console.log('✅ spots 表更新完成');
+  }
+
+  // v3: 收款码字段
+  if (!spotCols.includes('qr_alipay')) {
+    console.log('Adding v3 columns to spots...');
+    db.prepare("ALTER TABLE spots ADD COLUMN qr_alipay TEXT DEFAULT ''").run();
+    db.prepare("ALTER TABLE spots ADD COLUMN qr_wechat TEXT DEFAULT ''").run();
+    migrated = true;
+    console.log('✅ spots 表 v3 更新完成');
   }
 
   // 检查 buildings 表是否存在
