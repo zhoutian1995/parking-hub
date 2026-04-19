@@ -1,3 +1,9 @@
+// ========== 工具函数 ==========
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 // ========== 状态 ==========
 const API = '/api';
 let token = localStorage.getItem('ph_token');
@@ -75,7 +81,7 @@ function renderHeader() {
     return;
   }
   el.innerHTML = `<div class="flex items-center gap-3">
-    <button onclick="navigate('profile');loadProfile()" class="text-sm text-neutral-600 hover:text-neutral-900 transition-colors">${currentUser.nickname || '邻居'} ›</button>
+<button onclick=\"navigate('profile');loadProfile()\" class=\"text-sm text-neutral-600 hover:text-neutral-900 transition-colors\">${escapeHtml(currentUser.nickname) || '邻居'} ›</button>
     ${aboutBtn}
     <button onclick="handleLogout()" class="text-xs text-neutral-400 hover:text-red-500 transition-colors">退出</button>
   </div>`;
@@ -99,7 +105,7 @@ async function loadTestAccounts() {
     const el = document.getElementById('test-accounts');
     if (!res || !res.length) { el.innerHTML = '<div class="text-xs text-amber-600">暂无测试账号</div>'; return; }
     el.innerHTML = res.map(u => `<button onclick="testLogin('${u.phone}')" class="w-full text-left px-3 py-2 rounded-lg bg-white hover:bg-amber-100 transition-colors text-xs flex items-center justify-between">
-      <span>${u.nickname} (${u.phone})</span>
+      <span>${escapeHtml(u.nickname)} (${escapeHtml(u.phone)})</span>
       <span class="text-amber-500">→ 登录</span>
     </button>`).join('');
   } catch { document.getElementById('test-accounts').innerHTML = '<div class="text-xs text-amber-600">测试面板加载失败</div>'; }
@@ -253,7 +259,7 @@ async function loadNearbySpots() {
       <div class="flex items-center justify-between py-2 border-b border-neutral-100 last:border-0 cursor-pointer hover:bg-neutral-50" onclick="showSpotDetail(${s.id})">
         <div>
           <span class="text-sm font-medium">${s.spot_code}</span>
-          <span class="text-xs ml-2 text-neutral-400">${s.owner_name||''} ${s.owner_building||''}</span>
+          <span class=\"text-xs ml-2 text-neutral-400\">${escapeHtml(s.owner_name)||''} ${escapeHtml(s.owner_building)||''}</span>
           ${s.zone===currentUser.preferred_zone?'<span class="text-xs ml-1 text-amber-600"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" class="inline text-amber-500"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> 同区域</span>':''}
         </div>
         <span class="text-sm font-semibold text-emerald-600">¥${s.price_hour}/h</span>
@@ -275,9 +281,9 @@ function showSpotDetail(id) {
       <span class="text-sm text-neutral-500">区域</span>
       <span class="text-sm font-medium">${spot.zone} 区</span>
     </div>
-    ${spot.owner_name?`<div class="flex items-center justify-between"><span class="text-sm text-neutral-500">业主</span><span class="text-sm font-medium">${spot.owner_name}（${spot.owner_building||''}${spot.owner_unit||''}）</span></div>`:''}
+    ${spot.owner_name?`<div class=\"flex items-center justify-between\"><span class=\"text-sm text-neutral-500\">业主</span><span class=\"text-sm font-medium\">${escapeHtml(spot.owner_name)}（${escapeHtml(spot.owner_building)||''}${escapeHtml(spot.owner_unit)||''}）</span></div>`:''}
     ${spot.status==='available'?`<div class="flex items-center justify-between"><span class="text-sm text-neutral-500">价格</span><span class="text-sm font-medium text-amber-600">¥${spot.price_hour}/时（24h封顶 ¥${spot.price_cap}）</span></div>`:''}
-    ${spot.notes?`<div class="mt-2 p-3 bg-amber-50 rounded-xl border border-amber-100"><div class="text-xs text-amber-700 font-medium mb-1">业主备注</div><div class="text-sm text-amber-800">${spot.notes}</div></div>`:''}
+    ${spot.notes?`<div class=\"mt-2 p-3 bg-amber-50 rounded-xl border border-amber-100\"><div class=\"text-xs text-amber-700 font-medium mb-1\">业主备注</div><div class=\"text-sm text-amber-800\">${escapeHtml(spot.notes)}</div></div>`:''}
   </div>`;
   let actions = '';
   if (spot.status === 'available' && currentUser) {

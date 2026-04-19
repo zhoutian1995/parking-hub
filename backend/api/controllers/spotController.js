@@ -35,7 +35,7 @@ exports.nearby = asyncHandler(async (req, res) => {
     `).all(req.user.id, limit);
   }
 
-  sendSuccess(res, spots);
+  res.json(spots);
 });
 
 // 公开统计：动态按区域返回车位数量
@@ -125,8 +125,7 @@ exports.bindSpot = asyncHandler(async (req, res) => {
   // MVP: 直接绑定，不做 AI 验证（后续加）
   // TODO: 调用 AI 视觉模型验证合同中的车位编号
   db.prepare("UPDATE spots SET owner_id = ?, status = 'available' WHERE id = ?").run(req.user.id, spot.id);
-
-  sendSuccess(res, { spot_code: spot.spot_code }, '车位绑定成功');
+  res.json({ spot_code: spot.spot_code, message: '车位绑定成功' });
 });
 
 // 发布车位共享（按 ID）

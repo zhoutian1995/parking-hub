@@ -39,10 +39,11 @@ exports.create = asyncHandler(async (req, res) => {
      VALUES (?, ?, ?, ?, 'pending', ?)`
   ).run(spot_id, spot.owner_id, req.user.id, plate.trim(), spot.price_hour);
 
-  sendSuccess(res, {
+  res.json({
     id: result.lastInsertRowid,
-    notice: '车主确认后，请按页面提示完成付款并通知管家'
-  }, '申请成功！已通知车位主人，请等待确认');
+    notice: '车主确认后，请按页面提示完成付款并通知管家',
+    message: '申请成功！已通知车位主人，请等待确认'
+  });
 });
 
 // 车主确认
@@ -51,8 +52,13 @@ exports.accept = (req, res) => {
   const borrow = db.prepare("SELECT * FROM borrows WHERE id = ? AND status = 'pending' AND owner_id = ?").get(req.params.id, req.user.id);
   if (!borrow) return res.status(400).json({ error: '借用请求不存在或已处理', code: 'NOT_FOUND' });
 
-  db.prepare("UPDATE borrows SET status = 'active', start_time = datetime('now','localtime') WHERE id = ?").run(borrow.id);
-  db.prepare("UPDATE spots SET status = 'occupied' WHERE id = ?").run(borrow.spot_id);
+  const doAccept = db.transaction(() => {
+    db.prepare("UPDATE borrows SET status = 'active', start_time = datetime('now','localtime') WHERE id = ?").run(borrow.id);
+    db.prepare("UPDATE spots SET status = 'occupied' WHERE id = ?").run(borrow.spot_id);
+    // 拒绝同车位其他 pending 借用
+    db.prepare("UPDATE borrows SET status = 'rejected' WHERE spot_id = ? AND status = 'pending' AND id != ?").run(borrow.spot_id, borrow.id);
+  });
+  doAccept();
 
   // 返回完整借用信息，供前端展示通知管家文案
   const borrower = db.prepare("SELECT * FROM users WHERE id = ?").get(borrow.borrower_id);
@@ -86,8 +92,11 @@ exports.done = (req, res) => {
   const cap = borrow.price_cap || 20;
   const total = Math.min(hours * borrow.price_hour, cap);
 
-  db.prepare("UPDATE borrows SET status = 'done', end_time = datetime('now','localtime'), total_price = ? WHERE id = ?").run(total, borrow.id);
-  db.prepare("UPDATE spots SET status = 'available' WHERE id = ?").run(borrow.spot_id);
+  const doDone = db.transaction(() => {
+    db.prepare("UPDATE borrows SET status = 'done', end_time = datetime('now','localtime'), total_price = ? WHERE id = ?").run(total, borrow.id);
+    db.prepare("UPDATE spots SET status = 'available' WHERE id = ?").run(borrow.spot_id);
+  });
+  doDone();
 
   res.json({ message: '借用结束', total_price: total, hours: hours, code: 'DONE' });
 };

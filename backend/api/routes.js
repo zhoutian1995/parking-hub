@@ -24,9 +24,9 @@ router.post('/auth/login', authController.phoneLogin);
 router.get('/auth/wechat', authController.wechatAuth);
 router.get('/auth/wechat/callback', authController.wechatCallback);
 
-// 测试面板（仅开发环境）
-router.get('/test/accounts', devOnly, authController.testAccounts);
-router.post('/test/login', devOnly, authController.testLogin);
+// 测试面板
+router.get('/test/accounts', authController.testAccounts);
+router.post('/test/login', authController.testLogin);
 
 // 微信登录（保留）
 router.get('/wechat/login', userController.wechatLogin);

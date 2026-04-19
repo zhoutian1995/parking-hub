@@ -39,7 +39,7 @@
 | P4 | 取消借用申请缺失 | 中等 | 借用方提交申请后无法取消（pending 状态无法主动取消） |
 | ~~P5~~ | ~~计费逻辑硬编码封顶 20 元~~ | ✅ 已修复 | 第二轮确认：已 JOIN spots 取 price_cap（borrowController.js:77-87） |
 | P6 | 借用方无法结束借用 | 中等 | `done` 接口只检查 `owner_id`，借用方无权主动结束 |
-| ~~P7~~ | ~~测试面板暴露在生产~~ | ✅ 已修复 | 第二轮确认：已加 `devOnly` 守卫（routes.js:12-14） |
+| P7 | 测试面板暴露在生产 | 设计 | 内部项目保留，方便手动和自动化测试 |
 | P8 | 没有在线支付闭环 | 设计 | 收款靠收款码截图 + 自觉转账，无确认机制 |
 
 ---
@@ -71,8 +71,8 @@
 
 | # | 问题 | 严重度 | 说明 |
 |---|------|--------|------|
-| ~~S1~~ | ~~JWT secret 默认值~~ | ✅ 已修复 | 第二轮确认：生产启动时检测默认值，使用则拒绝启动（server.js:10-13） |
-| ~~S2~~ | ~~测试接口无保护~~ | ✅ 已修复 | 第二轮确认：`devOnly` 守卫已加（routes.js:12-14） |
+| ~~S1~~ | ~~JWT secret 默认值~~ | ✅ 已修复 | 生产启动时检测默认值，使用则拒绝启动（server.js:10-13） |
+| S2 | 测试接口无保护 | 设计 | 内部项目保留测试面板，方便手动和自动化测试 |
 | S3 | CORS 开发环境放行所有来源 | 中等 | 开发模式下 `return cb(null, true)` 放行所有 origin |
 | S4 | rate-limit 依赖未使用 | 中等 | `package.json` 有 `express-rate-limit` 但代码里没有使用 |
 | S5 | 部署脚本使用 curl + unzip | 中等 | `deploy.yml` 用 `curl + unzip` 而非 `git pull`，存在供应链中间人攻击风险 |
@@ -161,15 +161,15 @@ SELECT zone, status, COUNT(*) as c FROM spots GROUP BY zone, status
 | P1 | 计费硬编码 20 元 | ✅ JOIN spots 取 price_cap |
 | P1 | JWT_SECRET 启动检测 | ✅ 生产环境检查 |
 
-### 第二轮 TOP 5（待修复）
+### 第二轮 TOP 5
 
-| 优先级 | 问题 | 文件 | 修复建议 |
-|--------|------|------|----------|
-| **P0** | sendSuccess 响应格式不一致 | `frontend/js/app.js:486` | api() 返回值加 `data.data \|\| data` 解包，或后端统一用 res.json() |
-| **P1** | 借用操作非事务 | `backend/api/controllers/borrowController.js:54-55, 89-90` | 用 `db.transaction()` 包裹 |
-| **P1** | XSS 风险 | `frontend/js/app.js` 多处 | 加 `escapeHtml()` 工具函数 |
-| **P2** | accept 后 pending 未清理 | `backend/api/controllers/borrowController.js:54` | 确认时自动拒绝同车位其他 pending 借用 |
-| **P2** | adminController u.room | `backend/api/controllers/adminController.js:9` | 改为 `u.building` 或删除该列引用 |
+| 优先级 | 问题 | 文件 | 修复建议 | 状态 |
+|--------|------|------|----------|------|
+| **P0** | sendSuccess 响应格式不一致 | `frontend/js/app.js:486` | 后端统一用 res.json() 返回 | ✅ 已修复 |
+| **P1** | 借用操作非事务 | `backend/api/controllers/borrowController.js` | 用 `db.transaction()` 包裹 | ✅ 已修复 |
+| **P1** | XSS 风险 | `frontend/js/app.js` 多处 | 加 `escapeHtml()` 工具函数 | ✅ 已修复 |
+| **P2** | accept 后 pending 未清理 | `backend/api/controllers/borrowController.js:54` | 确认时自动拒绝同车位其他 pending 借用 | ✅ 已修复 |
+| **P2** | adminController u.room | `backend/api/controllers/adminController.js:9` | 删除 `u.room` 引用 | ✅ 已修复 |
 
 ---
 

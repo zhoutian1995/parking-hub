@@ -6,7 +6,7 @@ const path = require('path');
 exports.listVerifications = (req, res) => {
   const db = getDb();
   const rows = db.prepare(
-    `SELECT v.*, u.nickname, u.phone, u.building, u.room
+    `SELECT v.*, u.nickname, u.phone, u.building
      FROM verifications v JOIN users u ON v.user_id = u.id
      WHERE v.status = 'pending' ORDER BY v.created_at`
   ).all();
