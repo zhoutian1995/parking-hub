@@ -24,19 +24,35 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          # Download latest code from GitHub
-          cd /home/admin/project/parking-hub
-          curl -sL "https://api.github.com/repos/zhoutian1995/parking-hub/zipball/main" -o parking-hub.zip
-          unzip -o parking-hub.zip
-          mv */* . 2>/dev/null || true
-          mv */.* . 2>/dev/null || true
-          rmdir */ 2>/dev/null || true
-          rm -f parking-hub.zip
+          # Clean and download latest code
+          cd /home/admin/project
+          rm -rf parking-hub-tmp
+          mkdir -p parking-hub-tmp
+          curl -sL "https://api.github.com/repos/zhoutian1995/parking-hub/zipball/main" -o /tmp/parking-hub.zip
+          unzip -q /tmp/parking-hub.zip -d /tmp/
+          # Find the extracted folder (it has a commit hash in the name)
+          EXTRACTED=$(ls -d /tmp/zhoutian1995-parking-hub-* 2>/dev/null | head -1)
+          if [ -d "$EXTRACTED" ]; then
+            cp -r "$EXTRACTED"/* parking-hub-tmp/
+            cp -r "$EXTRACTED"/.* parking-hub-tmp/ 2>/dev/null || true
+          fi
+          rm -rf /tmp/zhoutian1995-parking-hub-* /tmp/parking-hub.zip
+          
+          # Backup old, swap new
+          cd /home/admin/project
+          if [ -d "parking-hub/backend" ]; then
+            cp parking-hub/.env parking-hub-tmp/.env 2>/dev/null || true
+            cp -r parking-hub/database/*.db* parking-hub-tmp/database/ 2>/dev/null || true
+            cp -r parking-hub/node_modules parking-hub-tmp/ 2>/dev/null || true
+          fi
+          rm -rf parking-hub
+          mv parking-hub-tmp parking-hub
           
           # Install dependencies
+          cd parking-hub
           npm install
           
-          # Restart service with PM2
+          # Restart service
           pm2 delete parking-hub 2>/dev/null || true
           pm2 start backend/server.js --name parking-hub
           pm2 save
