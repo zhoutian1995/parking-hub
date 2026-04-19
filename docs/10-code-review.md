@@ -34,11 +34,11 @@
 | # | 问题 | 严重度 | 说明 |
 |---|------|--------|------|
 | P1 | 没有手机验证码校验 | 设计 | 任何人知道手机号就能登录。当前小区内部 50 人场景可接受，用户量增长后需补 |
-| P2 | 借用流程缺少拒绝功能 | 中等 | 车主无法拒绝借用申请（无 `/borrows/:id/reject` 路由） |
+| P2 | 借用流程缺少拒绝功能 | ✅ 已修复 | 新增 `/borrows/:id/reject` 和 `/borrows/:id/cancel` 路由 |
 | P3 | 时间冲突未校验 | 中等 | 发布时设置了开始/结束时间，但借用时不检查是否在空闲时段内 |
-| P4 | 取消借用申请缺失 | 中等 | 借用方提交申请后无法取消（pending 状态无法主动取消） |
+| P4 | 取消借用申请缺失 | ✅ 已修复 | 新增 `/borrows/:id/cancel`，借用方可取消 pending 申请 |
 | ~~P5~~ | ~~计费逻辑硬编码封顶 20 元~~ | ✅ 已修复 | 第二轮确认：已 JOIN spots 取 price_cap（borrowController.js:77-87） |
-| P6 | 借用方无法结束借用 | 中等 | `done` 接口只检查 `owner_id`，借用方无权主动结束 |
+| P6 | 借用方无法结束借用 | ✅ 已修复 | `done` 接口改为 `owner_id OR borrower_id`，双方均可结束 |
 | P7 | 测试面板暴露在生产 | 设计 | 内部项目保留，方便手动和自动化测试 |
 | P8 | 没有在线支付闭环 | 设计 | 收款靠收款码截图 + 自觉转账，无确认机制 |
 
@@ -59,11 +59,11 @@
 | # | 问题 | 严重度 | 说明 |
 |---|------|--------|------|
 | A1 | 前端 app.js 490 行单文件 | 中等 | 技术方案设计了 `js/pages/` 目录但未实施，所有逻辑堆在一个文件 |
-| A2 | API 函数定义了两次 | 中等 | `guide.js` 和 `app.js` 都定义了 `api()`，后者覆盖前者，guide.js 中的是死代码 |
+| ~~A2~~ | ~~API 函数定义了两次~~ | ✅ 已修复 | guide.js 中重复的 api() 已删除，保留 app.js 版本 |
 | A3 | 微信回调路由重复 | 低 | authController 和 userController 各有一套微信登录/回调（routes.js:24-25 和 32-33），功能重叠 |
-| A4 | adminController 查询不存在的列 | 低 | `adminController.js:9` 查询 `u.room` 但 users 表无此列，会导致审核列表接口报错 |
+| ~~A4~~ | ~~adminController 查询不存在的列~~ | ✅ 已修复 | `u.room` 已删除（adminController.js:9） |
 | A5 | db 实例是模块级单例 | 低 | 进程生命周期内只有一个连接，对 SQLite 没问题但不可测试 |
-| **A6** | **sendSuccess 与 res.json 响应格式不一致** | **严重** | 见下方「第二轮新发现」 |
+| ~~A6~~ | ~~sendSuccess 与 res.json 响应格式不一致~~ | ✅ 已修复 | 后端统一用 res.json() 返回 |
 
 ---
 
@@ -127,7 +127,9 @@
 
 **修复建议**：accept 时增加 `UPDATE borrows SET status = 'rejected' WHERE spot_id = ? AND status = 'pending' AND id != ?`。
 
-### N4. [中等] 前端 XSS 风险
+### N4. [已修复] 前端 XSS 风险
+
+已加 `escapeHtml()` 函数，所有 innerHTML 中的用户数据已转义。
 
 `app.js` 多处用 `innerHTML` 拼接用户数据（昵称、备注、楼栋等），无 HTML 转义：
 

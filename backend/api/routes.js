@@ -60,6 +60,8 @@ router.post('/spots/:id/unshare', authMiddleware, spotController.unshareSpot);
 // 借用
 router.post('/borrows', authMiddleware, borrowController.create);
 router.post('/borrows/:id/accept', authMiddleware, borrowController.accept);
+router.post('/borrows/:id/reject', authMiddleware, borrowController.reject);
+router.post('/borrows/:id/cancel', authMiddleware, borrowController.cancel);
 router.post('/borrows/:id/done', authMiddleware, borrowController.done);
 router.get('/borrows/mine', authMiddleware, borrowController.mine);
 

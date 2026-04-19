@@ -77,14 +77,14 @@ exports.accept = (req, res) => {
   });
 };
 
-// 完成借用
+// 完成借用（车主或借用方均可结束）
 exports.done = (req, res) => {
   const db = getDb();
   const borrow = db.prepare(`
     SELECT b.*, s.price_cap 
     FROM borrows b JOIN spots s ON b.spot_id = s.id
-    WHERE b.id = ? AND b.status = 'active' AND b.owner_id = ?
-  `).get(req.params.id, req.user.id);
+    WHERE b.id = ? AND b.status = 'active' AND (b.owner_id = ? OR b.borrower_id = ?)
+  `).get(req.params.id, req.user.id, req.user.id);
   if (!borrow) return res.status(400).json({ error: '借用记录不存在', code: 'NOT_FOUND' });
 
   const startTime = new Date(borrow.start_time);
@@ -117,4 +117,24 @@ exports.mine = (req, res) => {
      ORDER BY b.start_time DESC`
   ).all(req.user.id, req.user.id);
   res.json(rows);
+};
+
+// 车主拒绝借用
+exports.reject = (req, res) => {
+  const db = getDb();
+  const borrow = db.prepare("SELECT * FROM borrows WHERE id = ? AND status = 'pending' AND owner_id = ?").get(req.params.id, req.user.id);
+  if (!borrow) return res.status(400).json({ error: '借用请求不存在或已处理', code: 'NOT_FOUND' });
+
+  db.prepare("UPDATE borrows SET status = 'rejected' WHERE id = ?").run(borrow.id);
+  res.json({ message: '已拒绝该借用申请', code: 'REJECTED' });
+};
+
+// 借用方取消申请
+exports.cancel = (req, res) => {
+  const db = getDb();
+  const borrow = db.prepare("SELECT * FROM borrows WHERE id = ? AND status = 'pending' AND borrower_id = ?").get(req.params.id, req.user.id);
+  if (!borrow) return res.status(400).json({ error: '借用请求不存在或已处理', code: 'NOT_FOUND' });
+
+  db.prepare("UPDATE borrows SET status = 'cancelled' WHERE id = ?").run(borrow.id);
+  res.json({ message: '已取消借用申请', code: 'CANCELLED' });
 };

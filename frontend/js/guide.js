@@ -226,29 +226,4 @@ function handleError(error, context = '') {
   toast(error.message || '操作失败，请重试', 'error');
 }
 
-// 更新 API 调用函数，使用统一错误处理
-async function api(method, path, body = null) {
-  try {
-    const opts = {
-      method,
-      headers: { 'Content-Type': 'application/json' }
-    };
-    if (token) opts.headers['Authorization'] = `Bearer ${token}`;
-    if (body) opts.body = JSON.stringify(body);
-    
-    const res = await fetch(API + path, opts);
-    const data = await res.json();
-    
-    if (!res.ok) {
-      const error = new Error(data.message || '请求失败');
-      error.status = res.status;
-      error.code = data.code;
-      throw error;
-    }
-    
-    return data.data || data; // 兼容新旧格式
-  } catch (error) {
-    handleError(error, `${method} ${path}`);
-    throw error;
-  }
-}
+// handleError 已移至 app.js — 此处不再重复定义 api()
