@@ -1,7 +1,8 @@
 const { getDb } = require('../../database/init');
+const { sendError, sendSuccess, asyncHandler } = require('../../utils/errors');
 
 // 附近可借车位（按常用区域排序）
-exports.nearby = (req, res) => {
+exports.nearby = asyncHandler(async (req, res) => {
   const db = getDb();
   const limit = parseInt(req.query.limit) || 5;
 
@@ -34,8 +35,8 @@ exports.nearby = (req, res) => {
     `).all(req.user.id, limit);
   }
 
-  res.json(spots);
-};
+  sendSuccess(res, spots);
+});
 
 // 公开统计：动态按区域返回车位数量
 exports.stats = (req, res) => {
@@ -105,26 +106,26 @@ exports.mySpots = (req, res) => {
 };
 
 // 绑定车位（提交合同验证）
-exports.bindSpot = (req, res) => {
+exports.bindSpot = asyncHandler(async (req, res) => {
   const db = getDb();
   const { spot_code, contract_image } = req.body;
-  if (!spot_code) return res.status(400).json({ error: '请输入车位编号' });
+  if (!spot_code) return sendError(res, 'INVALID_INPUT', '请输入车位编号');
 
   // 检查是否已有2个车位
   const mySpots = db.prepare('SELECT COUNT(*) as c FROM spots WHERE owner_id = ?').get(req.user.id).c;
-  if (mySpots >= 2) return res.status(400).json({ error: '每个手机号最多绑定 2 个车位' });
+  if (mySpots >= 2) return sendError(res, 'SPOT_LIMIT_REACHED');
 
   // 检查车位是否存在
   const spot = db.prepare('SELECT * FROM spots WHERE spot_code = ?').get(spot_code.toUpperCase());
-  if (!spot) return res.status(404).json({ error: `车位 ${spot_code} 不存在` });
-  if (spot.owner_id) return res.status(400).json({ error: '该车位已被其他邻居绑定' });
+  if (!spot) return sendError(res, 'SPOT_NOT_FOUND', `车位 ${spot_code} 不存在`);
+  if (spot.owner_id) return sendError(res, 'SPOT_ALREADY_BOUND');
 
   // MVP: 直接绑定，不做 AI 验证（后续加）
   // TODO: 调用 AI 视觉模型验证合同中的车位编号
   db.prepare("UPDATE spots SET owner_id = ?, status = 'available' WHERE id = ?").run(req.user.id, spot.id);
 
-  res.json({ message: '车位绑定成功', spot_code: spot.spot_code });
-};
+  sendSuccess(res, { spot_code: spot.spot_code }, '车位绑定成功');
+});
 
 // 发布车位共享（按 ID）
 exports.shareSpotById = (req, res) => {

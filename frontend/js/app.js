@@ -114,6 +114,7 @@ async function testLogin(phone) {
     if (!currentUser.building) { loadProfile(); navigate('profile'); }
     else { navigate('home'); }
     toast('测试登录成功');
+    startGuide(); // 显示新用户引导
   } catch (e) { toast(e.message || '登录失败', 'error'); }
 }
 
@@ -215,7 +216,11 @@ function handleSearch(query) {
   const container = document.getElementById('search-results');
   if (!query || query.length < 2) { container.classList.add('hidden'); return; }
   api('GET', `/spots/search?q=${encodeURIComponent(query)}`).then(results => {
-    if (!results.length) { container.innerHTML = '<div class="p-4 text-sm text-neutral-400 text-center">未找到</div>'; container.classList.remove('hidden'); return; }
+    if (!results.length) { 
+      container.innerHTML = renderEmptyState(emptyStates.searchNoResult(query));
+      container.classList.remove('hidden');
+      return; 
+    }
     container.innerHTML = results.map(s => `
       <div class="flex items-center justify-between p-3 border-b border-neutral-100 last:border-0 cursor-pointer hover:bg-neutral-50" onclick="showSpotFromSearch(${s.id})">
         <div><span class="text-sm font-medium">${s.spot_code}</span><span class="text-xs ml-2 ${s.status==='available'?'text-emerald-600':s.status==='occupied'?'text-red-500':'text-neutral-400'}">${statusText(s.status)}</span></div>
@@ -240,7 +245,10 @@ async function loadNearbySpots() {
     currentSpots = spots;
     const el = document.getElementById('nearby-spots');
     if (!el) return;
-    if (!spots.length) { el.innerHTML = '<div class="text-sm text-neutral-400 text-center py-4">暂无可借车位</div>'; return; }
+    if (!spots.length) { 
+      el.innerHTML = renderEmptyState(emptyStates.noNearby);
+      return; 
+    }
     el.innerHTML = spots.map(s => `
       <div class="flex items-center justify-between py-2 border-b border-neutral-100 last:border-0 cursor-pointer hover:bg-neutral-50" onclick="showSpotDetail(${s.id})">
         <div>
@@ -306,11 +314,14 @@ async function loadMySpots() {
   try {
     const res = await api('GET', '/spots/mine');
     const el = document.getElementById('my-spots');
-    if (!res.length) { el.innerHTML = `<div class="text-sm text-neutral-400 mb-2">暂未绑定车位</div><button onclick="showVerifyModal()" class="text-sm text-emerald-600 font-medium hover:text-emerald-700">+ 绑定车位</button>`; return; }
+    if (!res.length) { 
+      el.innerHTML = renderEmptyState(emptyStates.noSpots);
+      return; 
+    }
     el.innerHTML = res.map(s => `<div class="flex items-center justify-between py-2 border-b border-neutral-100 last:border-0">
       <div><span class="text-sm font-medium">${s.spot_code}</span><span class="text-xs ml-2 text-neutral-400">${s.status==='available'?'已发布':'未发布'}</span></div>
       <div class="flex gap-2">${s.status==='available'?`<button onclick="unshareSpot(${s.id})" class="text-xs text-red-500">下架</button>`:`<button onclick="navigate('publish')" class="text-xs text-emerald-600">发布</button>`}</div>
-    </div>`).join('') + (res.length < 2 ? `<button onclick="showVerifyModal()" class="text-sm text-emerald-600 font-medium hover:text-emerald-700 mt-2">+ 绑定更多车位（最多2个）</button>` : '');
+    </div>`).join('') + (res.length < 2 ? `<button onclick="showVerifyModal()" id="bind-spot-btn" class="text-sm text-emerald-600 font-medium hover:text-emerald-700 mt-2">+ 绑定更多车位（最多2个）</button>` : '');
   } catch (e) { toast(e.message || '加载失败', 'error'); }
 }
 

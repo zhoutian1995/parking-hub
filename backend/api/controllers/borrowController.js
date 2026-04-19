@@ -1,21 +1,22 @@
 const { getDb } = require('../../database/init');
+const { sendError, sendSuccess, asyncHandler } = require('../../utils/errors');
 
 // 申请借用（预付制）
-exports.create = (req, res) => {
+exports.create = asyncHandler(async (req, res) => {
   const { spot_id, plate } = req.body;
   const db = getDb();
 
   // 1. 车牌号必填
   if (!plate || !plate.trim()) {
-    return res.status(400).json({ error: '请填写车牌号', code: 'PLATE_REQUIRED' });
+    return sendError(res, 'INVALID_INPUT', '请填写车牌号');
   }
 
   // 2. 车位必须可用
   const spot = db.prepare("SELECT * FROM spots WHERE id = ? AND status = 'available'").get(spot_id);
-  if (!spot) return res.status(400).json({ error: '车位当前不可用（可能已被借用或已下架）', code: 'SPOT_UNAVAILABLE' });
+  if (!spot) return sendError(res, 'SPOT_NOT_AVAILABLE', '车位当前不可用（可能已被借用或已下架）');
 
   // 3. 不能借自己的车位
-  if (spot.owner_id === req.user.id) return res.status(400).json({ error: '不能借用自己发布的车位', code: 'SELF_BORROW' });
+  if (spot.owner_id === req.user.id) return sendError(res, 'BORROW_SELF_SPOT');
 
   // 4. 检查是否已申请过（同一用户+同一车位）
   const myExisting = db.prepare(
@@ -23,14 +24,14 @@ exports.create = (req, res) => {
   ).get(spot_id, req.user.id);
   if (myExisting) {
     const msg = myExisting.status === 'pending' ? '你已申请过该车位，等待车主确认中' : '你正在使用该车位';
-    return res.status(400).json({ error: msg, code: 'ALREADY_APPLIED' });
+    return sendError(res, 'ALREADY_APPLIED', msg);
   }
 
   // 5. 检查车位是否被其他人占用
   const otherActive = db.prepare(
     "SELECT id FROM borrows WHERE spot_id = ? AND status IN ('pending','active')"
   ).get(spot_id);
-  if (otherActive) return res.status(400).json({ error: '该车位已被其他人申请', code: 'SPOT_TAKEN' });
+  if (otherActive) return sendError(res, 'BORROW_UNAVAILABLE', '该车位已被其他人申请');
 
   // 6. 创建借用记录
   const result = db.prepare(
@@ -38,13 +39,11 @@ exports.create = (req, res) => {
      VALUES (?, ?, ?, ?, 'pending', ?)`
   ).run(spot_id, spot.owner_id, req.user.id, plate.trim(), spot.price_hour);
 
-  res.json({
+  sendSuccess(res, {
     id: result.lastInsertRowid,
-    message: '申请成功！已通知车位主人，请等待确认',
-    code: 'SUCCESS',
     notice: '车主确认后，请按页面提示完成付款并通知管家'
-  });
-};
+  }, '申请成功！已通知车位主人，请等待确认');
+});
 
 // 车主确认
 exports.accept = (req, res) => {

@@ -282,7 +282,7 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
         <span class="text-[10px]">首页</span>
       </button>
-      <button onclick="navigate('publish')" class="nav-tab flex-1 py-3 flex flex-col items-center gap-0.5 text-neutral-400" data-page="publish">
+      <button onclick="navigate('publish')" class="nav-tab flex-1 py-3 flex flex-col items-center gap-0.5 text-neutral-400" data-page="publish" id="publish-nav-btn">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
         <span class="text-[10px]">发布</span>
       </button>
@@ -352,6 +352,26 @@
   <!-- Toast -->
   <div id="toast-container" class="fixed top-16 left-1/2 -translate-x-1/2 z-[200] space-y-2"></div>
 
+  <!-- 新用户引导 -->
+  <div id="guide-overlay" class="fixed inset-0 z-[300] hidden">
+    <!-- 半透明遮罩 -->
+    <div class="absolute inset-0 bg-black/50"></div>
+    
+    <!-- 高亮区域（动态定位） -->
+    <div id="guide-highlight" class="absolute rounded-xl border-2 border-white shadow-lg hidden"></div>
+    
+    <!-- 提示卡片 -->
+    <div id="guide-card" class="absolute bg-white rounded-2xl p-5 shadow-xl max-w-xs w-72">
+      <p id="guide-text" class="text-sm text-neutral-700 mb-4 whitespace-pre-line"></p>
+      <div class="flex justify-between items-center">
+        <button onclick="skipGuide()" class="text-xs text-neutral-400 hover:text-neutral-600 transition-colors">跳过</button>
+        <button id="guide-next-btn" onclick="nextGuideStep()" class="px-4 py-2 bg-neutral-900 text-white text-sm rounded-lg hover:bg-neutral-800 transition-colors">下一步</button>
+      </div>
+      <div id="guide-dots" class="flex justify-center gap-1.5 mt-3"></div>
+    </div>
+  </div>
+
   <script src="js/app.js"></script>
+  <script src="js/guide.js"></script>
 </body>
 </html>
